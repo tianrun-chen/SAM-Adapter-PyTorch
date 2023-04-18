@@ -1,10 +1,10 @@
 ## SAM Fails to Segment Anything?—SAM-adaptor: Adapting SAM in Underperformed Scenes
 
-Tianrun Chen, Lanyun Zhu, Chaotao Ding, Runlong Cao, Shangzhan Zhang, Yan Wang, Papa Mao, Ying Zang
+Tianrun Chen, Lanyun Zhu, Chaotao Ding, Runlong Cao, Yan Wang, Zejian Li, Lingyun Sun, Papa Mao, Ying Zang
 
 
   <a href='https://tianrun-chen.github.io/SAM-Adaptor/'><img src='https://img.shields.io/badge/Project-Page-Green'></a>
-## Code Coming Soon
+## 
 
 ## Environment
 This code was implemented with Python 3.8 and PyTorch 1.13.0. You can install all the requirements via:
