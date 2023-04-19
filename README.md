@@ -1,4 +1,4 @@
-## SAM Fails to Segment Anything?—SAM-adaptor: Adapting SAM in Underperformed Scenes
+## SAM Fails to Segment Anything?—SAM-adapter: Adapting SAM in Underperformed Scenes
 
 Tianrun Chen, Lanyun Zhu, Chaotao Ding, Runlong Cao, Yan Wang, Zejian Li, Lingyun Sun, Papa Mao, Ying Zang
 
