@@ -7,6 +7,8 @@ Tianrun Chen, Lanyun Zhu, Chaotao Ding, Runlong Cao, Yan Wang, Zejian Li, Lingyu
   <a href='https://tianrun-chen.github.io/SAM-Adaptor/'><img src='https://img.shields.io/badge/Project-Page-Green'></a>
 ## 
 
+<a href='https://arxiv.org/abs/2304.09148'><img src='https://img.shields.io/badge/ArXiv-2304.09148-red' /></a> 
+
 ## Environment
 This code was implemented with Python 3.8 and PyTorch 1.13.0. You can install all the requirements via:
 ```bash
@@ -54,7 +56,14 @@ To be uploaded
 If you find our work useful in your research, please consider citing:
 
 ```
-
+@misc{chen2023sam,
+      title={SAM Fails to Segment Anything? -- SAM-Adapter: Adapting SAM in Underperformed Scenes: Camouflage, Shadow, and More}, 
+      author={Tianrun Chen and Lanyun Zhu and Chaotao Ding and Runlong Cao and Shangzhan Zhang and Yan Wang and Zejian Li and Lingyun Sun and Papa Mao and Ying Zang},
+      year={2023},
+      eprint={2304.09148},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
 ```
 
 ## Acknowledgements
