@@ -133,10 +133,6 @@ class SAM(nn.Module):
                     p.requires_grad = False
 
 
-        model_total_params = sum(p.numel() for p in self.parameters())
-        model_grad_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
-        print('model_grad_params:' + str(model_grad_params),
-              '\nmodel_total_params:' + str(model_total_params))
 
         self.loss_mode = loss
         if self.loss_mode == 'bce':
