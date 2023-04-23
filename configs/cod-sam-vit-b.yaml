@@ -1,0 +1,108 @@
+train_dataset:
+  dataset:
+    name: paired-image-folders
+    args:
+      root_path_1: /public2/home/chaotao/datasets/codDataset/train/img
+      root_path_2: /public2/home/chaotao/datasets/codDataset/train/gt
+      cache: none
+      split_key: train
+  wrapper:
+    name: train
+    args:
+      inp_size: 1024
+      augment: false
+  batch_size: 2
+
+val_dataset:
+  dataset:
+    name: paired-image-folders
+    args:
+      root_path_1: /public2/home/chaotao/datasets/COD/TestDataset/COD10K/Imgs
+      root_path_2: /public2/home/chaotao/datasets/COD/TestDataset/COD10K/GT
+      cache: none
+      split_key: test
+  wrapper:
+    name: val
+    args:
+      inp_size: 1024
+  batch_size: 2
+
+test_dataset:
+  dataset:
+    name: paired-image-folders
+    args:
+      root_path_1: /public2/home/chaotao/datasets/COD/TestDataset/COD10K/Imgs
+      root_path_2: /public2/home/chaotao/datasets/COD/TestDataset/COD10K/GT
+      cache: none
+      split_key: test
+  wrapper:
+    name: val
+    args:
+      inp_size: 1024
+  batch_size: 1
+
+eval_type: cod
+sam_checkpoint: ./pretrained/sam_vit_l_0b3195.pth
+data_norm:
+  inp:
+    sub:
+    - 0.5
+    div:
+    - 0.5
+  gt:
+    sub:
+    - 0.5
+    div:
+    - 0.5
+  gt_rgb:
+    sub:
+    - 0.5
+    div:
+    - 0.5
+model:
+  name: sam
+  args:
+    inp_size: 1024
+    loss: iou
+    encoder_mode:
+      name: sam
+      img_size: 1024
+      mlp_ratio: 4
+      patch_size: 16
+      qkv_bias: true
+      use_rel_pos: true
+      window_size: 14
+      out_chans: 256
+      scale_factor: 32
+      input_type: fft
+      freq_nums: 0.25
+      prompt_type: highpass
+      prompt_embed_dim: 256
+      tuning_stage: 1234
+      handcrafted_tune: true
+      embedding_tune: true
+      adaptor: adaptor
+      embed_dim: 1024
+      depth: 24
+      num_heads: 16
+      global_attn_indexes:
+      - 5
+      - 11
+      - 17
+      - 23
+optimizer:
+  name: adamw
+  args:
+    lr: 0.0002
+lr_min: 1.0e-7
+epoch_max: 20
+
+multi_step_lr:
+  milestones:
+  - 1
+  gamma: 0.1
+epoch_val: 1
+epoch_save: 1
+
+#resume: 60
+#start_epoch: 60
