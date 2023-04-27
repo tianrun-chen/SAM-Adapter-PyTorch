@@ -42,7 +42,7 @@ test_dataset:
   batch_size: 1
 
 eval_type: cod
-sam_checkpoint: ./pretrained/sam_vit_l_0b3195.pth
+sam_checkpoint: ./pretrained/sam_vit_b_01ec64.pth
 data_norm:
   inp:
     sub:
@@ -82,14 +82,14 @@ model:
       handcrafted_tune: true
       embedding_tune: true
       adaptor: adaptor
-      embed_dim: 1024
-      depth: 24
-      num_heads: 16
+      embed_dim: 768
+      depth: 12
+      num_heads: 12
       global_attn_indexes:
+      - 2
       - 5
+      - 8
       - 11
-      - 17
-      - 23
 optimizer:
   name: adamw
   args:
