@@ -55,6 +55,8 @@ To be uploaded
 ### Shadow Detection
 - **[ISTD](https://github.com/DeepInsight-PCALab/ST-CGAN)**
 
+### Polyp Segmentation - Medical Applications
+- **[Kvasir](https://datasets.simula.no/kvasir-seg/)**
 
 ## Citation
 
