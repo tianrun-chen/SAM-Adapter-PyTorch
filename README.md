@@ -46,7 +46,7 @@ python test.py --config [CONFIG_PATH] --model [MODEL_PATH]
 ```
 
 ## Pre-trained Models
-To be uploaded
+https://cowtransfer.com/s/da0559afdfc045 click link to check [ best_results.tar ] or access cowtransfer.com and input extract code: y85nd7 to check;
 
 ## Dataset
 
