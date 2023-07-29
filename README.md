@@ -39,6 +39,12 @@ python test.py --config [CONFIG_PATH] --model [MODEL_PATH]
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch train.py --nnodes 1 --nproc_per_node 4 --config [CONFIG_PATH]
 ```
+Updates on 30 July. As mentioned by @YunyaGaoTree in issue #39
+You can also try to use the code below to gain (probably) faster training.
+```bash
+!torchrun train.py --config configs/demo.yaml
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nnodes 1 --nproc_per_node 4 loadddptrain.py --config configs/demo.yaml
+```
 
 ## Test
 ```bash
