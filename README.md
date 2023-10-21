@@ -4,7 +4,7 @@ Tianrun Chen, Lanyun Zhu, Chaotao Ding, Runlong Cao, Yan Wang, Shangzhan Zhang, 
 
 <a href='https://www.kokoni3d.com/'> KOKONI, Moxin Technology (Huzhou) Co., LTD </a>, Zhejiang University, Singapore University of Technology and Design, Huzhou University, Beihang University.
 
-ICCV 2023 Workshop Paper
+In Proceedings of the IEEE/CVF International Conference on Computer Vision (pp. 3367-3375).
 
   <a href='https://tianrun-chen.github.io/SAM-Adaptor/'><img src='https://img.shields.io/badge/Project-Page-Green'></a>
 ## 
