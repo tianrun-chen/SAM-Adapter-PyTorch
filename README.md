@@ -10,7 +10,7 @@ In Proceedings of the IEEE/CVF International Conference on Computer Vision (pp. 
 ## 
 
 <a href='https://arxiv.org/abs/2304.09148'><img src='https://img.shields.io/badge/ArXiv-2304.09148-red' /></a> 
-Update on 30 August: This paper will be prsented at ICCV 2023. 
+Update on 30 August: This paper will be presented at ICCV 2023. 
 
 Update on 28 April: We tested the performance of polyp segmentation to show our approach can also work on medical datasets.
 <img src='https://tianrun-chen.github.io/SAM-Adaptor/static/images/polyp.jpg'>
