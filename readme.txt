@@ -1,0 +1,60 @@
+Important:
+    - when using cpu/cuda for training, line 98 in sam.py has to be changed between 'cpu' and 'cuda'
+
+Short::
+    Requirements:
+        - pip install -r requirements.txt
+        - install pytorch https://pytorch.org/get-started/locally/
+    Preprocessing:
+        - Needed data:
+            - Folder with all *.geotif tiles of the respected area
+            - Folder with all *.geojson files containing polygons as masks, masking pv-panels in the area
+        - to Run:
+            run.py
+
+    Training:
+        - Needed data:
+            - pretrained sam-weights
+            - preprocessed test/eval images/masks (--> Preprocessing)
+            - config File
+        - to Run:
+            train_min_ma_checkpoint.py --config configs\ma_B.yaml
+
+    Testing:
+        - Needed data:
+            - trained weights (--> Training)
+            - test images/masks
+            - config File (equal to Training)
+        - to Run:
+            test_min.py --config configs\ma_B.yaml --model save/...
+
+    Postprocessing:
+        - Needed data:
+            - predicted masks (--> Testing)
+        - to Run:
+            - ma_make_overlay.py (Build img/mask overlay)
+            - ma_make_hist.py (Build mask histogram)
+            - ma_make_binary_50.py (Build Binary-Mask with 50% threshold)
+            - ma_make_contrast.py (0-1 Pixelvalue Image --> 0-255 Pixelvalue Grayscale Image)
+
+Detailed::
+    Preprocessing:
+        - masks.py: small changes to the code of Yasmin mainly taken from https://github.com/yasminhossam/fixMatchSeg-Muc/blob/main/solarnet/preprocessing/masks.py plus added bounding box creation (not used)
+        - load_munich.py: processing the geotif and geojson files to get the needed data for the dicts Jasmin uses in her code to calculate the masks
+                - readTifKoos(): reading the UTM-coordinates of the geotif (Tiles)
+                - readGeoJsonPoly(): reading the mask (Polygon) coordinates
+                - buildReadData(): finding the tiles which include the masks, returning the dict mask.py creates the np-masks from
+                - copyTif(): copys the tifs which include a mask to a seperate Folder
+        - split_ma.py: calculates the split and splits images/masks the same way.
+            - calcSplit(): calculates the pixel-coordinates where the masks/images have to be cutted to get the needed image size. The function should return coordinates which create some overlapping. The algorithm is pretty basic and there is no proof for "the best" split.
+        - np2png_ma.py: converting np-masks to png-binary images.
+        - rename_union_new_ma.py: includes a info in the mask/image name to unite them into one trainings-set.
+        - proof_not_empty.py: checks if there is no (or below a absolute threshold (20)) mask (binary ones) in a mask and if so delets image + mask
+        - train_test_split_ma.py: splits the masks/images randomly in test/train/eval folders.
+    Training:
+    Testing:
+    Postprocessing:
+
+
+    Results:
+        - after 20 epochs training: https://www.dropbox.com/scl/fo/fkaq4v9izj69md45fa6b6/h?rlkey=0dmuoq15f9n3s2fohkvt1etz6&dl=0 
