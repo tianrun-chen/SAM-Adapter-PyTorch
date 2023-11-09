@@ -13,6 +13,11 @@ Short::
             run.py
 
     Training:
+        - CPU/Cuda:
+            - CPU: train_min_ma_checkpoint.py
+            - Cuda: train_cuda.py
+            - !! sam.py line 98 needs to be adjusted !!
+
         - Needed data:
             - pretrained sam-weights
             - preprocessed test/eval images/masks (--> Preprocessing)
@@ -58,3 +63,7 @@ Detailed::
 
     Results:
         - after 20 epochs training: https://www.dropbox.com/scl/fo/fkaq4v9izj69md45fa6b6/h?rlkey=0dmuoq15f9n3s2fohkvt1etz6&dl=0 
+
+    Information:
+        - pyTorch-SAM-adapter based on https://github.com/tianrun-chen/SAM-Adapter-PyTorch
+        - supported by https://fortiss.org
