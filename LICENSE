@@ -1,4 +1,19 @@
-""" MIT License
+The folders:
+ - configs
+ - datasets
+ - models
+
+and the files:
+ - __init__.py
+ - requirements.txt
+ - sod_metric.py
+ - train_cuda.py
+ - train_cuda_nonDistributed.py
+ - utils.py
+
+are published under the following License by tianrun-chen.
+
+MIT License
 
 Copyright (c) 2023 tianrun-chen
 
@@ -19,28 +34,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- """.
-
-imageio==2.9.0
-ipython~=8.11.0
-matplotlib~=3.1.2
-opencv-python~=4.7.0.72
-PyYAML~=6.0
-scikit-learn~=1.2.2
-scipy~=1.10.1
-
-tqdm~=4.51.0
-#torch~=1.13.0+cu116
-numpy #~=1.20.3
-typing~=3.7.4.3
-terminaltables~=3.1.10
-Pillow~=9.4.0
-#torchvision~=0.14.0+cu116
-tensorboardX~=2.6
-onnxruntime~=1.14.1
-setuptools~=67.6.1
-timm~=0.3.2
-easydict~=1.10
-attr~=0.3.2
-thop~=0.1.1.post2209072238
-torchsummary~=1.5.1
