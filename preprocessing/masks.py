@@ -8,10 +8,7 @@ from typing import List, Tuple
 from load_munich_ma import LoadMunich
 from bounding_box_ma import BoundingBox
 
-IMAGE_SIZES = {
-    'munich_florian':(2500, 2500),
-    'munich_tepe':(2500, 2500)
-}
+IMAGE_SIZE = (2500, 2500)
 
 
 class MaskMaker:
@@ -36,7 +33,7 @@ class MaskMaker:
             # first, we make sure the mask file exists; if not,
             # we make it
             masked_city = self.data_folder / f"{city}_masks"
-            x_size, y_size = IMAGE_SIZES[city]
+            x_size, y_size = IMAGE_SIZE
             if not masked_city.exists(): masked_city.mkdir()
 
             for image, polygons in tqdm(files.items()):
@@ -59,7 +56,7 @@ class MaskMaker:
             # first, we make sure the mask file exists; if not,
             # we make it
             masked_city = self.data_folder / f"{city}_bounding_masks"
-            x_size, y_size = IMAGE_SIZES[city]
+            x_size, y_size = IMAGE_SIZE
             if not masked_city.exists(): masked_city.mkdir()
 
             for image, polygons in tqdm(files.items()):
