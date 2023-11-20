@@ -1,53 +1,83 @@
+import argparse
+import os
+
 from masks import MaskMaker
-from split_ma import Split
+from split_return import Split
+from save_img_mask import Save
 from np2png_ma import Np2Png
 from rename_union_new_ma import RenameUnion
 from proof_not_empty import Proof
 from train_test_split_ma import TrainTestSplit
 import create_folderstructure
 
-create_folderstructure.create_folders('all')
+class Run:
+    def runAll(geotif, geojson):
+        create_folderstructure.create_folders('all')
 
-maskmaker = MaskMaker('data/munich_geojson/PV_MUC_20220506_1_Florian.geojson','data/geodatenbayern_munich_lk_city','munich_florian')
-maskmaker.process()
-#bounding boxes not needed
-#maskmaker.process_bounding_box()
+        for geojson_file in os.listdir(geojson):
+            filename = geojson_file.split('.')[0]
+            maskmaker = MaskMaker(f'{geojson}/{geojson_file}',geotif,filename)
+            maskmaker.process()
 
-split = Split(2500,512)
-split.splitImages("data/masked_images_munich_florian")
-#split.splitMask("data/munich_florian_bounding_masks")
-split.splitMask("data/munich_florian_masks")
+            split = Split(2500,512)
+            images = split.splitImages(f"data/masked_images_{filename}")
+            masks = split.splitMask(f"data/{filename}_masks")
 
-np2png_florian = Np2Png("data/split/munich_florian_masks","data/split/florian_png_masks")
-np2png_florian.np_2_png()
+            save_ = Save()
+            save_.saveImg('data/rdy/img', images, filename)
+            save_.saveMask('data/rdy/masks', masks, filename)
 
-rename_union = RenameUnion('data/split/florian_png_masks','data/split/rdy/masks','florian')
-rename_union.rename_union()
-rename_union = RenameUnion('data/split/masked_images_munich_florian','data/split/rdy/images','florian')
-rename_union.rename_union()
 
-maskmaker_tepe = MaskMaker('data/munich_geojson/20220509_PV_Labeling_Tepe.geojson','data/geodatenbayern_munich_lk_city','munich_tepe')
-maskmaker_tepe.process()
-#bounding boxes not needed
-#maskmaker_tepe.process_bounding_box()
+        proof = Proof('data/rdy/img', 'data/rdy/masks')
+        proof.is_empty_del()
 
-split_tepe = Split(2500,512)
-split_tepe.splitImages("data/masked_images_munich_tepe")
-#split_tepe.splitMask("data/munich_tepe_bounding_masks")
-split_tepe.splitMask("data/munich_tepe_masks")
+        test_train_split = TrainTestSplit
+        test_train_split.split('data/rdy/img','load/img')
 
-np2png_tepe = Np2Png("data/split/munich_tepe_masks", "data/split/tepe_png_masks")
-np2png_tepe.np_2_png()
+        test_train_split.split('data/rdy/masks','load/masks')
+    
+    def runSplit(split_images, split_masks, geojson):
+        create_folderstructure.create_folders('all')
 
-rename_union = RenameUnion('data/split/tepe_png_masks','data/split/rdy/masks','tepe')
-rename_union.rename_union()
-rename_union = RenameUnion('data/split/masked_images_munich_tepe','data/split/rdy/images','tepe')
-rename_union.rename_union()
+        for geojson_file in os.listdir(geojson):
+            filename = geojson_file.split('.')[0]
 
-proof = Proof('data/split/rdy/images', 'data/split/rdy/masks')
-proof.is_empty_del()
+            split = Split(2500,512)
+            images = split.splitImages(split_images)
+            masks = split.splitMask(split_masks)
 
-test_train_split = TrainTestSplit
-test_train_split.split('data/split/rdy/images','load/img')
+            save_ = Save()
+            save_.saveImg('data/rdy/img', images, filename)
+            save_.saveMask('data/rdy/masks', masks, filename)
 
-test_train_split.split('data/split/rdy/masks','load/masks')
+
+        proof = Proof('data/rdy/img', 'data/rdy/masks')
+        proof.is_empty_del()
+
+        test_train_split = TrainTestSplit
+        test_train_split.split('data/rdy/img','load/img')
+
+        test_train_split.split('data/rdy/masks','load/masks')
+            
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--runtype', default='all')
+    parser.add_argument('--geotif', default=None)
+    parser.add_argument('--geojson', default=None)
+    parser.add_argument('--splitimages', default=None)
+    parser.add_argument('--splitmasks', default=None)
+    args = parser.parse_args()
+
+    run_type = args.runtype
+    geotif = args.geotif
+    geojson = args.geojson
+    split_images = args.splitimages
+    split_masks = args.splitmasks
+
+    if run_type == 'all':
+            Run.runAll(geotif, geojson)
+    elif run_type == 'split':
+            Run.runSplit(split_images, split_masks, geojson)
+    else:
+        print('Please enter correct --runtype all/split')
