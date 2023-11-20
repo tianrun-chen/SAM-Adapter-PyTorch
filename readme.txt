@@ -4,6 +4,7 @@ Important:
 Short::
     Requirements:
         - pip install -r requirements.txt
+        - mim install mmcv
         - install pytorch https://pytorch.org/get-started/locally/
     Preprocessing:
         - Needed data:
