@@ -16,7 +16,8 @@ Preprocessing:
 - to Run:
     - ```console
         python run.py --runtype all --geotif path/to/geotiffolder/ --geojson path/to/geojsonfolder/ --split_size 512
-        ---- or ----
+        ```
+    - ```console
         python run.py --runtype split -- geojson path/to/geojsonfolder --splitimages path/to/imagesfolder/ --splitmasks path/to/masksfolder/ --split_size 512
         ```
 
