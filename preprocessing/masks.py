@@ -8,8 +8,6 @@ from typing import List, Tuple
 from load_munich_ma import LoadMunich
 from bounding_box_ma import BoundingBox
 
-IMAGE_SIZE = (2500, 2500)
-
 
 class MaskMaker:
     """This class looks for all files defined in the metadata, and
@@ -21,9 +19,11 @@ class MaskMaker:
             Path of the data folder, which should be set up as described in `data/README.md`
     """
 
-    def __init__(self, geojson_path, images_path, city, data_folder: Path = Path('data')) -> None:
+    def __init__(self, geojson_path, images_path, city, image_size, utm_size, data_folder: Path = Path('data')) -> None:
         self.data_folder = data_folder
-        self.loader = LoadMunich(images_path,geojson_path,city)
+        self.image_size = image_size
+        self.utm_size = utm_size
+        self.loader = LoadMunich(images_path,geojson_path,city, self.image_size, self.utm_size)
         self.polygon_images, self.polygon_pixels = self.loader.run()
 
     def process(self) -> None:
@@ -33,7 +33,7 @@ class MaskMaker:
             # first, we make sure the mask file exists; if not,
             # we make it
             masked_city = self.data_folder / f"{city}_masks"
-            x_size, y_size = IMAGE_SIZE
+            x_size, y_size = self.image_size
             if not masked_city.exists(): masked_city.mkdir()
 
             for image, polygons in tqdm(files.items()):
@@ -56,7 +56,7 @@ class MaskMaker:
             # first, we make sure the mask file exists; if not,
             # we make it
             masked_city = self.data_folder / f"{city}_bounding_masks"
-            x_size, y_size = IMAGE_SIZE
+            x_size, y_size = self.image_size
             if not masked_city.exists(): masked_city.mkdir()
 
             for image, polygons in tqdm(files.items()):

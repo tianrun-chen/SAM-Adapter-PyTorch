@@ -11,12 +11,12 @@ from train_test_split_ma import TrainTestSplit
 import create_folderstructure
 
 class Run:
-    def runAll(geotif, geojson, input_size, split_size):
+    def runAll(geotif, geojson, input_size, split_size, utm_size):
         create_folderstructure.create_folders('all')
 
         for geojson_file in os.listdir(geojson):
             filename = geojson_file.split('.')[0]
-            maskmaker = MaskMaker(f'{geojson}/{geojson_file}',geotif,filename)
+            maskmaker = MaskMaker(f'{geojson}/{geojson_file}', geotif, filename, (input_size, input_size), (utm_size, utm_size))
             maskmaker.process()
 
             split = Split(input_size, split_size)
@@ -69,6 +69,8 @@ if __name__ == '__main__':
     parser.add_argument('--splitmasks', default=None)
     parser.add_argument('--inputimgsize', default=2500, type=int)
     parser.add_argument('--splitsize', default=None, type=int)
+    parser.add_argument('--utmtilesize', default=1000, type=int)
+
     args = parser.parse_args()
 
     run_type = args.runtype
@@ -78,9 +80,10 @@ if __name__ == '__main__':
     split_masks = args.splitmasks
     input_size = args.inputimgsize
     split_size = args.splitsize
+    utm_size = args.utmtilesize
 
     if run_type == 'all':
-            Run.runAll(geotif, geojson, input_size, split_size)
+            Run.runAll(geotif, geojson, input_size, split_size, utm_size)
     elif run_type == 'split':
             Run.runSplit(split_images, split_masks, geojson, input_size, split_size)
     else:

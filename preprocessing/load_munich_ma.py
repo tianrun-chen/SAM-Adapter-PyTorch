@@ -4,15 +4,14 @@ import geojson
 import shutil
 
 
-TILE_SIZE_UTM = (1000,1000)
-IMAGE_SIZE_PIXEL = (2500,2500)
-
 class LoadMunich:
 
-    def __init__(self,tif_folder,json_path,city):
+    def __init__(self,tif_folder,json_path,city, image_size, utm_size):
         self.tif_folder_ = tif_folder
         self.json_path_ = json_path
         self.city_ = city
+        self.image_size_ = image_size
+        self.utm_size_ = utm_size
 
     def readTifKoos(self):
         id = 0
@@ -49,9 +48,9 @@ class LoadMunich:
                 #looping through coordinates of the polygon
                 for i in range(len(geojson_poly[j_id]['polygon'])):
                     dy = geojson_poly[j_id]['polygon'][i][1]-tif_koos[t_id]['ymin']
-                    if dy < TILE_SIZE_UTM[1] and dy >= 0:
+                    if dy < self.utm_size_[1] and dy >= 0:
                         dx = geojson_poly[j_id]['polygon'][i][0]-tif_koos[t_id]['xmin']
-                        if dx < TILE_SIZE_UTM[0] and dx >= 0:
+                        if dx < self.utm_size_[0] and dx >= 0:
                             intile = True
                 if intile:
                     #proofing if list exists --> append otherwise create
@@ -62,12 +61,12 @@ class LoadMunich:
                         polygon_images[self.city_][tif_koos[t_id]['filename']].append(j_id)
                     polygon_pixels[j_id] = []
                     #looping through all coordinates per polygon
-                    x_utm_2_pixel = IMAGE_SIZE_PIXEL[0]/TILE_SIZE_UTM[0]
-                    y_utm_2_pixel = IMAGE_SIZE_PIXEL[1]/TILE_SIZE_UTM[1]
+                    x_utm_2_pixel = self.image_size_[0]/self.utm_size_[0]
+                    y_utm_2_pixel = self.image_size_[1]/self.utm_size_[1]
                     for i in range(len(geojson_poly[j_id]['polygon'])):
                             #tif origin lower left corner, np array origin upper left corner
                             #Transposed x <> y switched
-                            polygon_pixels[j_id].append((abs((geojson_poly[j_id]['polygon'][i][1]-tif_koos[t_id]['ymin'])*y_utm_2_pixel-IMAGE_SIZE_PIXEL[1]),(geojson_poly[j_id]['polygon'][i][0]-tif_koos[t_id]['xmin'])*x_utm_2_pixel))
+                            polygon_pixels[j_id].append((abs((geojson_poly[j_id]['polygon'][i][1]-tif_koos[t_id]['ymin'])*y_utm_2_pixel-self.image_size_[1]),(geojson_poly[j_id]['polygon'][i][0]-tif_koos[t_id]['xmin'])*x_utm_2_pixel))
                                 
 
         return polygon_images, polygon_pixels
