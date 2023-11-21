@@ -2,8 +2,8 @@ train_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: ./load/img/train/dv0
-      root_path_2: ./load/masks/train/dv0
+      root_path_1: ./load/img/train
+      root_path_2: ./load/masks/train
       cache: none
       split_key: train
   wrapper:
