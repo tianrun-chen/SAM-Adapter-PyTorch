@@ -154,18 +154,18 @@ def train(train_loader, model):
         batch_loss = [torch.zeros_like(model.loss_G) for _ in range(dist.get_world_size())]
         dist.all_gather(batch_loss, model.loss_G)
         loss_list.extend(batch_loss)
-        for gpu in range(len(torch.cuda.memory_reserved)):
-            t = torch.cuda.get_device_properties(gpu).total_memory
-            r = torch.cuda.memory_reserved(gpu)
-            a = torch.cuda.memory_allocated(gpu)
-            f = r-a  # free inside reserved
-            try:
-                with open(os.path.join('logs','gpu_mem_log.txt'),'a') as f:
-                    f.write(f'{datetime.now()} total memory: {t} reserverd memory: {r} allocated memory: {a} free inside reserved: {f}\n')
-            except:
-                os.makedirs('logs')
-                with open(os.path.join('logs','gpu_mem_log.txt'),'a') as f:
-                    f.write(f'{datetime.now()} total memory: {t} reserverd memory: {r} allocated memory: {a} free inside reserved: {f}\n')
+        for gpu in range(torch.cuda.device_count()):
+                t = torch.cuda.get_device_properties(gpu).total_memory
+                r = torch.cuda.memory_reserved(gpu)
+                a = torch.cuda.memory_allocated(gpu)
+                free = int(r)-int(a)  # free inside reserved
+                try:
+                    with open(os.path.join('logs','gpu_mem_log.txt'),'a') as f:
+                        f.write(f'{datetime.now()} torch-device: {gpu} total memory: {t} reserverd memory: {r} allocated memory: {a} free inside reserved: {free}\n')
+                except:
+                    os.makedirs('logs')
+                    with open(os.path.join('logs','gpu_mem_log.txt'),'a') as f:
+                        f.write(f'{datetime.now()} torch-device: {gpu} total memory: {t} reserverd memory: {r} allocated memory: {a} free inside reserved: {free}\n')
         if pbar is not None:
             pbar.update(1)
 
