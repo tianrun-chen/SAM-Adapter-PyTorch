@@ -14,7 +14,11 @@ Preprocessing:
 - Folder with all *.geotif tiles of the respected area
 - Folder with all *.geojson files containing polygons as masks, masking pv-panels in the area
 - to Run:
-    - run.py
+    - ```console
+        python run.py --runtype all --geotif path/to/geotiffolder/ --geojson path/to/geojsonfolder/ --split_size 512
+        ---- or ----
+        python run.py --runtype split -- geojson path/to/geojsonfolder --splitimages path/to/imagesfolder/ --splitmasks path/to/masksfolder/ --split_size 512
+        ```
 
 Training:
 - CPU/Cuda:
