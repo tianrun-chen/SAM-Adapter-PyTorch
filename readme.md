@@ -33,7 +33,10 @@ Training:
         - config File
 - to Run:
     - ```console
-        train_min_ma_checkpoint.py --config configs\ma_B.yaml
+        python train_min_ma_checkpoint.py --config configs\ma_B.yaml
+        ```
+    - ```console
+        python -m torch.distributed.launch train_cuda.py --config configs/ma_B_cuda.yaml
         ```
 
 Testing:
@@ -43,7 +46,7 @@ Testing:
     - config File (equal to Training)
 - to Run:
     - ```console
-        test_min.py --config configs\ma_B.yaml --model save/... 
+        python test_min.py --config configs\ma_B.yaml --model save/... 
         ```
 Postprocessing:
 - Needed data:
