@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 
-with open('logs/loss_list_full.txt','r') as log:
+with open('logs/loss_list.txt','r') as log:
     dv_nr = 0
     batch_list = {dv_nr:[]}
     dv_loss_list = []
@@ -33,7 +33,7 @@ for dv,epoch in zip(dv_list,epoch_list):
 
 
 plt.plot(plot_epoch_list,dv_loss_list,'.')
-plt.xlabel('epochs in integer')
+plt.xlabel('epochs as integer')
 plt.ylabel('IoU-Loss')
-plt.show()
+plt.savefig('logs/loss_plot.png')
 
