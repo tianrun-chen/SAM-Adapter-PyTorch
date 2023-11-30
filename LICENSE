@@ -10,6 +10,7 @@ and the files:
  - train_cuda.py
  - train_cuda_nonDistributed.py
  - utils.py
+ - test_cuda.py
 
 are published under the following License by tianrun-chen.
 

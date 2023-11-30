@@ -48,6 +48,9 @@ Testing:
     - ```console
         python test_min.py --config configs\ma_B.yaml --model save/... 
         ```
+    - ```console
+        python test_cuda.py --config configs\ma_B_cuda.yaml --model save/... 
+        ```
 Postprocessing:
 - Needed data:
     - predicted masks (--> Testing)
