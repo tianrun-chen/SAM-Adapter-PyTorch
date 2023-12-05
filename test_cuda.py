@@ -36,6 +36,10 @@ import utils
 from torchvision import transforms
 from mmcv.runner import load_checkpoint
 
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import numpy as np
+
 
 def batched_predict(model, inp, coord, bsize):
     with torch.no_grad():
@@ -96,6 +100,25 @@ def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
         inp = batch['inp']
 
         pred = torch.sigmoid(model.infer(inp))
+
+        vector_temp = pred.detach().squeeze().numpy()
+
+        filepath = loader.dataset.dataset.dataset_1.files[k]
+        last = filepath.split('/')[-1]
+        file_name = last.split('.')[0]
+        save_path_img = 'test/dv'
+        save_path_np = 'test/numpy'
+        try:
+            np.save(f'{save_path_np}/{file_name}.npy',vector_temp)
+            
+        except:
+            os.makedirs(save_path_np)
+            np.save(f'{save_path_np}/{file_name}.npy',vector_temp)
+        try:
+            plt.imsave(f'{save_path_img}/{file_name}.png',vector_temp, cmap=cm.gray)
+        except:
+            os.makedirs(save_path_img)
+            plt.imsave(f'{save_path_img}/{file_name}.png',vector_temp, cmap=cm.gray)
 
         result1, result2, result3, result4 = metric_fn(pred, batch['gt'])
         val_metric1.add(result1.item(), inp.shape[0])
