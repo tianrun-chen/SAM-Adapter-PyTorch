@@ -92,7 +92,7 @@ def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
     val_metric4 = utils.Averager()
 
     pbar = tqdm(loader, leave=False, desc='val')
-
+    nr = 0
     for batch in pbar:
         for k, v in batch.items():
             batch[k] = v.cuda()
@@ -101,9 +101,11 @@ def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
 
         pred = torch.sigmoid(model.infer(inp))
 
-        vector_temp = pred.detach().squeeze().numpy()
+        cpu_pred = pred.cpu()
+        vector_temp = cpu_pred.detach().squeeze().numpy()
 
-        filepath = loader.dataset.dataset.dataset_1.files[k]
+        filepath = loader.dataset.dataset.dataset_1.files[nr]
+        nr += 1
         last = filepath.split('/')[-1]
         file_name = last.split('.')[0]
         save_path_img = 'test/dv'
