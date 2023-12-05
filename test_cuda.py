@@ -113,30 +113,31 @@ def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config')
-    parser.add_argument('--model')
-    parser.add_argument('--prompt', default='none')
-    args = parser.parse_args()
-
-    with open(args.config, 'r') as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    spec = config['test_dataset']
-    dataset = datasets.make(spec['dataset'])
-    dataset = datasets.make(spec['wrapper'], args={'dataset': dataset})
-    loader = DataLoader(dataset, batch_size=spec['batch_size'],
-                        num_workers=8)
-
-    model = models.make(config['model']).cuda()
-    sam_checkpoint = torch.load(args.model, map_location='cuda:0')
-    model.load_state_dict(sam_checkpoint, strict=True)
+    with torch.no_grad():
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--config')
+        parser.add_argument('--model')
+        parser.add_argument('--prompt', default='none')
+        args = parser.parse_args()
     
-    metric1, metric2, metric3, metric4 = eval_psnr(loader, model,
-                                                   data_norm=config.get('data_norm'),
-                                                   eval_type=config.get('eval_type'),
-                                                   eval_bsize=config.get('eval_bsize'),
-                                                   verbose=True)
-    print('metric1: {:.4f}'.format(metric1))
-    print('metric2: {:.4f}'.format(metric2))
-    print('metric3: {:.4f}'.format(metric3))
-    print('metric4: {:.4f}'.format(metric4))
+        with open(args.config, 'r') as f:
+            config = yaml.load(f, Loader=yaml.FullLoader)
+        spec = config['test_dataset']
+        dataset = datasets.make(spec['dataset'])
+        dataset = datasets.make(spec['wrapper'], args={'dataset': dataset})
+        loader = DataLoader(dataset, batch_size=spec['batch_size'],
+                            num_workers=8)
+    
+        model = models.make(config['model']).cuda()
+        sam_checkpoint = torch.load(args.model, map_location='cuda:0')
+        model.load_state_dict(sam_checkpoint, strict=True)
+        
+        metric1, metric2, metric3, metric4 = eval_psnr(loader, model,
+                                                       data_norm=config.get('data_norm'),
+                                                       eval_type=config.get('eval_type'),
+                                                       eval_bsize=config.get('eval_bsize'),
+                                                       verbose=True)
+        print('metric1: {:.4f}'.format(metric1))
+        print('metric2: {:.4f}'.format(metric2))
+        print('metric3: {:.4f}'.format(metric3))
+        print('metric4: {:.4f}'.format(metric4))
