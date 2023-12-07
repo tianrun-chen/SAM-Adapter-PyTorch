@@ -55,6 +55,8 @@ Postprocessing:
 - Needed data:
     - predicted masks (--> Testing)
 - to Run:
+    - ma_show_results.py (Build overlay showing true/false positive, true/false negative + iou)
+    - ma_show_loss.py (shows loss during training based on logs)
     - ma_make_overlay.py (Build img/mask overlay)
     - ma_make_hist.py (Build mask histogram)
     - ma_make_binary_50.py (Build Binary-Mask with 50% threshold)
