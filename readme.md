@@ -15,10 +15,10 @@ Preprocessing:
 - Folder with all *.geojson files containing polygons as masks, masking pv-panels in the area
 - to Run:
     - ```console
-        python run.py --runtype all --geotif path/to/geotiffolder/ --geojson path/to/geojsonfolder/ --split_size 512
+        python run.py --runtype all --geotif path/to/geotiffolder/ --geojson path/to/geojsonfolder/ --splitsize 512
         ```
     - ```console
-        python run.py --runtype split -- geojson path/to/geojsonfolder --splitimages path/to/imagesfolder/ --splitmasks path/to/masksfolder/ --split_size 512
+        python run.py --runtype split --geojson path/to/geojsonfolder --splitimages path/to/imagesfolder/ --splitmasks path/to/masksfolder/ --splitsize 512
         ```
 
 Training:
