@@ -13,17 +13,20 @@ class Proof:
         #pcr_empty is the percentage of images that are allowed to be empty
         deleted_images = 0
         total_images = 0
+        not_empty_img = 0
+        empty_img = []
         for mask_filename in os.listdir(self.mask_path_):
             mask_filepath = os.path.join(self.mask_path_, mask_filename)
             mask_png = Image.open(mask_filepath)
             mask_np = np.asarray(mask_png)
-            empty_img = []
             if mask_np.sum() < 20:
                 empty_img.append(mask_filename)
-
+            else:
+                not_empty_img += 1
             total_images += 1
 
-        for _ in range(int(len(empty_img)*(1-pct_empty))):
+        img_to_stay = int((not_empty_img*pct_empty))
+        for _ in range(img_to_stay):
             empty_img.pop(random.randrange(0,len(empty_img)))
 
         for filename in empty_img:
@@ -33,4 +36,4 @@ class Proof:
             os.remove(img_filepath)
             deleted_images += 1
 
-        print(f'total deleted images {deleted_images} of {total_images}')
+        print(f'total deleted images {deleted_images} of {total_images}, {img_to_stay} are empty')

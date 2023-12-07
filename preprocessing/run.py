@@ -11,7 +11,7 @@ from train_test_split_ma import TrainTestSplit
 import create_folderstructure
 
 class Run:
-    def runAll(geotif, geojson, input_size, split_size, utm_size):
+    def runAll(geotif, geojson, input_size, split_size, utm_size, pct_empty):
         create_folderstructure.create_folders('all')
 
         for geojson_file in os.listdir(geojson):
@@ -29,14 +29,14 @@ class Run:
 
 
         proof = Proof('data/rdy/img', 'data/rdy/masks')
-        proof.is_empty_del()
+        proof.is_empty_del(pct_empty)
 
         test_train_split = TrainTestSplit
         test_train_split.split('data/rdy/img','load/img')
 
         test_train_split.split('data/rdy/masks','load/masks')
     
-    def runSplit(split_images, split_masks, geojson, input_size, split_size):
+    def runSplit(split_images, split_masks, geojson, input_size, split_size, pct_empty):
         create_folderstructure.create_folders('all')
 
         for geojson_file in os.listdir(geojson):
@@ -52,7 +52,7 @@ class Run:
 
 
         proof = Proof('data/rdy/img', 'data/rdy/masks')
-        proof.is_empty_del()
+        proof.is_empty_del(pct_empty)
 
         test_train_split = TrainTestSplit
         test_train_split.split('data/rdy/img','load/img')
@@ -70,6 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('--inputimgsize', default=2500, type=int)
     parser.add_argument('--splitsize', default=None, type=int)
     parser.add_argument('--utmtilesize', default=1000, type=int)
+    parser.add_argument('--pct_empty', default= 0.1, type=float)
 
     args = parser.parse_args()
 
@@ -81,10 +82,11 @@ if __name__ == '__main__':
     input_size = args.inputimgsize
     split_size = args.splitsize
     utm_size = args.utmtilesize
+    pct_empty = args.pct_empty
 
     if run_type == 'all':
-            Run.runAll(geotif, geojson, input_size, split_size, utm_size)
+            Run.runAll(geotif, geojson, input_size, split_size, utm_size, pct_empty)
     elif run_type == 'split':
-            Run.runSplit(split_images, split_masks, geojson, input_size, split_size)
+            Run.runSplit(split_images, split_masks, geojson, input_size, split_size, pct_empty)
     else:
         print('Please enter correct --runtype all/split')
