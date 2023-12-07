@@ -87,7 +87,8 @@ Postprocessing:
 (DOP: Bayerische Vermessungsverwaltung – [www.geodaten.bayern.de](https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=dop40) (Daten verändert), Lizenz: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.de))
     - mean IoU over 88 test-images: 0.47234
 
-- after 30 epochs training:
+- after 30 epochs training: [Dropbox](https://www.dropbox.com/scl/fi/i84e584qwqv15oo2ohspq/32682_5340_54_tepe.png?rlkey=jdlfuqil8d3rk7f9ylg0ypvh8&dl=0)
+(DOP: Bayerische Vermessungsverwaltung – [www.geodaten.bayern.de](https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=dop40) (Daten verändert), Lizenz: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.de)) 
     - mean IoU over 88 test-images: 0.47306
 
 # Information:
