@@ -37,4 +37,5 @@ hists/
 overlay/
 pretrained/
 test/
+forwardpass/data/
 .vscode/
