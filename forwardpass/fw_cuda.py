@@ -21,8 +21,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  """
 
-import argparse
 import os
+import sys
+
+#adding path to the preprocessing module
+for modules in ['datasets', 'models', 'utils']:
+    path = os.path.abspath(modules)
+    sys.path.append(path)
+
+import argparse
 
 import yaml
 import torch
@@ -31,7 +38,6 @@ from tqdm import tqdm
 
 import datasets
 import models
-import utils
 
 from torchvision import transforms
 

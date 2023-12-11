@@ -1,12 +1,20 @@
+import sys
+import os
+#adding path to the preprocessing module
+path = os.path.abspath('preprocessing')
+sys.path.append(path)
+
 from download_open_data import DownloadOpenData
-from preprocessing.split_return import Split
-from preprocessing.save_img_mask import Save
-from postprocessing.ma_show_results import create_overlay_stats
+from split_return import Split
+from save_img_mask import Save
 import fw_cuda
 import argparse
 
+#under construction
+
 def run(lat_1, lon_1, lat_2, lon_2, output_folder):
-    DownloadOpenData.wgs84_download(lat_1, lon_1, lat_2, lon_2, output_folder)
+    download_ = DownloadOpenData()
+    download_.wgs84_download(lat_1, lon_1, lat_2, lon_2, output_folder)
 
     split = Split(2500, 256)
     images = split.splitImages(output_folder)
@@ -14,7 +22,7 @@ def run(lat_1, lon_1, lat_2, lon_2, output_folder):
     save_ = Save()
     save_.saveImg('forwardpass/data/split_img', images, '')
 
-    fw_cuda.run_forwardpass('configs/ma_B_cuda_fw.yaml', 'save/', 'output')
+    fw_cuda.run_forwardpass('configs/ma_B_cuda_fw.yaml', 'save/_ma_B/dv_29_18/model_epoch_last.pth', 'output')
 
 
 
