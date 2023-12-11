@@ -1,6 +1,7 @@
 import os
 import requests
 from tqdm import tqdm
+from pyproj import Transformer
 
 # in the making
 
@@ -51,3 +52,13 @@ def calculate_and_download(x1: str, y1: str, x2: str, y2: str, out_dir: str):
     """ Calculates and downloads all tiles needed to cover the area of interest. """
     tiles = calculate_needed_tiles(x1, y1, x2, y2)
     download_list_of_tiles(tiles, out_dir)
+
+def trafo_wgs84_etrs89(lat: float, long: float):
+    """ Transforms coordinates from WGS84 to ETRS89. """
+    return Transformer.from_crs("epsg:4326", "epsg:25832").transform(lat, long)
+
+def wgs84_download(x1: float, y1: float, x2: float, y2: float, out_dir: str):
+    """ input: wgs84 coos, Downloads open data from Bavarian government. """
+    x1, y1 = trafo_wgs84_etrs89(x1, y1)
+    x2, y2 = trafo_wgs84_etrs89(x2, y2)
+    calculate_and_download(str(int(x1)), str(int(y1)), str(int(x2)), str(int(y2)), out_dir)
