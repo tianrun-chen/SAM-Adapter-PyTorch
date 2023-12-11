@@ -29,10 +29,10 @@ val_dataset:
 
 test_dataset:
   dataset:
-    name: paired-image-folders
+    name: image-folder
     args:
       root_path_1: ./forwardpass/split_img
-      root_path_2: ./load/masks/test
+      #root_path_2: ./load/masks/test
       cache: none
       split_key: test
   wrapper:
