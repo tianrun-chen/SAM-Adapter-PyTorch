@@ -33,7 +33,7 @@ Training:
         - config File
 - to Run:
     - ```console
-        python train_min_ma_checkpoint.py --config configs\ma_B.yaml
+        python train_min_ma_checkpoint.py --config configs/ma_B.yaml
         ```
     - ```console
         python -m torch.distributed.launch train_cuda.py --config configs/ma_B_cuda.yaml
@@ -46,10 +46,10 @@ Testing:
     - config File (equal to Training)
 - to Run:
     - ```console
-        python test_min.py --config configs\ma_B.yaml --model save/... 
+        python test_min.py --config configs/ma_B.yaml --model save/... 
         ```
     - ```console
-        python test_cuda.py --config configs\ma_B_cuda.yaml --model save/... 
+        python test_cuda.py --config configs/ma_B_cuda.yaml --model save/... 
         ```
 Postprocessing:
 - Needed data:
@@ -61,6 +61,15 @@ Postprocessing:
     - ma_make_hist.py (Build mask histogram)
     - ma_make_binary_50.py (Build Binary-Mask with 50% threshold)
     - ma_make_contrast.py (0-1 Pixelvalue Image --> 0-255 Pixelvalue Grayscale Image)
+
+Forwardpass:
+- Needed data:
+    - trained weights (--> Training)
+    - config File (equal to Training)
+- to Run:
+    ```console
+    python forwardpass/run_forwardpass.py --lat_1 --lon_1 --lat_2 --lon_2 --config --model
+    ```
 
 # Detailed:
 Preprocessing:
