@@ -1,12 +1,15 @@
 import sys
 import os
-#adding path to the preprocessing module
-path = os.path.abspath('preprocessing')
-sys.path.append(path)
+
+#adding path to the some modules
+for modules in ['preprocessing', 'postprocessing']:
+    path = os.path.abspath(modules)
+    sys.path.append(path)
 
 from download_open_data import DownloadOpenData
 from split_return import Split
 from save_img_mask import Save
+from ma_make_overlay import *
 import argparse
 
 def run(lat_1, lon_1, lat_2, lon_2, output_folder):
@@ -20,6 +23,8 @@ def run(lat_1, lon_1, lat_2, lon_2, output_folder):
     save_.saveImg(f'{output_folder}/split_img', images, '')
 
     os.system(f'python fw_cuda.py --config configs/ma_B_cuda.yaml --model save/_ma_B/dv_29_18/model_epoch_last.pth --output_dir {output_folder}/pred_masks')
+
+    run_overlay(f'{output_folder}/split_img', f'{output_folder}/pred_masks/png', f'{output_folder}/overlay')
 
 
 
