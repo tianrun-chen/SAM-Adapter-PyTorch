@@ -24,7 +24,7 @@ SOFTWARE.
 import os
 import sys
 
-#adding path to the preprocessing module
+#adding path to the some modules
 for modules in ['datasets', 'models', 'utils', 'sod_metric']:
     path = os.path.abspath(modules)
     sys.path.append(path)
