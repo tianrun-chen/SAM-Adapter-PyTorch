@@ -19,7 +19,7 @@ def run(lat_1, lon_1, lat_2, lon_2, output_folder):
     save_ = Save()
     save_.saveImg(f'{output_folder}/split_img', images, '')
 
-    os.system(f'python fw_cuda.py --config configs/ma_B_cuda_fw.yaml --model save/_ma_B/dv_29_18/model_epoch_last.pth --output_dir {output_folder}/pred_masks')
+    os.system(f'python fw_cuda.py --config configs/ma_B_cuda.yaml --model save/_ma_B/dv_29_18/model_epoch_last.pth --output_dir {output_folder}/pred_masks')
 
 
 
