@@ -25,7 +25,7 @@ import os
 import sys
 
 #adding path to the preprocessing module
-for modules in ['datasets', 'models', 'utils']:
+for modules in ['datasets', 'models', 'utils', 'sod_metric']:
     path = os.path.abspath(modules)
     sys.path.append(path)
 
@@ -38,32 +38,14 @@ from tqdm import tqdm
 
 import datasets
 import models
+import utils
 
 from torchvision import transforms
+from torch.utils.data import Dataset
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
-
-
-'''def batched_predict(model, inp, coord, bsize):
-    with torch.no_grad():
-        model.gen_feat(inp)
-        n = coord.shape[1]
-        ql = 0
-        preds = []
-        while ql < n:
-            qr = min(ql + bsize, n)
-            pred = model.query_rgb(coord[:, ql: qr, :])
-            preds.append(pred)
-            ql = qr
-        pred = torch.cat(preds, dim=1)
-    return pred, preds
-
-
-def tensor2PIL(tensor):
-    toPIL = transforms.ToPILImage()
-    return toPIL(tensor)'''
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -72,7 +54,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def eval_psnr(loader, model, output_dir):
     model.eval()
 
-    pbar = tqdm(loader, leave=False, desc='val')
+    pbar = tqdm(loader, leave=False, desc='fw')
     nr = 0
     for batch in pbar:
         for k, v in batch.items():
@@ -85,11 +67,11 @@ def eval_psnr(loader, model, output_dir):
         cpu_pred = pred.cpu()
         vector_temp = cpu_pred.detach().squeeze().numpy()
 
-        filepath = loader.dataset.dataset.dataset_1.files[nr]
+        filepath = loader.dataset.dataset.files[nr]
         nr += 1
         last = filepath.split('/')[-1]
         file_name = last.split('.')[0]
-        save_path_img = f'{output_dir}/dv'
+        save_path_img = f'{output_dir}/png'
         save_path_np = f'{output_dir}/numpy'
         try:
             np.save(f'{save_path_np}/{file_name}.npy',vector_temp)
@@ -104,18 +86,24 @@ def eval_psnr(loader, model, output_dir):
             plt.imsave(f'{save_path_img}/{file_name}.png',vector_temp, cmap=cm.gray)
 
 
-def run_forwardpass(config, model, output_dir):
+if __name__ == '__main__':
     with torch.no_grad():
-        with open(config, 'r') as f:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--config')
+        parser.add_argument('--model')
+        parser.add_argument('--output_dir', default='output')
+        args = parser.parse_args()
+
+        with open(args.config, 'r') as f:
             config = yaml.load(f, Loader=yaml.FullLoader)
-        spec = config['test_dataset']
+        spec = config['fw_dataset']
         dataset = datasets.make(spec['dataset'])
         dataset = datasets.make(spec['wrapper'], args={'dataset': dataset})
         loader = DataLoader(dataset, batch_size=spec['batch_size'],
                             num_workers=8)
     
         model = models.make(config['model']).cuda()
-        sam_checkpoint = torch.load(model, map_location='cuda:0')
+        sam_checkpoint = torch.load(args.model, map_location='cuda:0')
         model.load_state_dict(sam_checkpoint, strict=True)
         
-        eval_psnr(loader, model, output_dir)
+        eval_psnr(loader, model, args.output_dir)
