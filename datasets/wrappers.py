@@ -57,6 +57,34 @@ class ValDataset(Dataset):
             'gt': self.mask_transform(mask)
         }
 
+@register('fw')
+class FwDataset(Dataset):
+    def __init__(self, dataset, inp_size=None, augment=False):
+        self.dataset = dataset
+        self.inp_size = inp_size
+        self.augment = augment
+
+        self.img_transform = transforms.Compose([
+                transforms.Resize((inp_size, inp_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+            ])
+        self.mask_transform = transforms.Compose([
+                transforms.Resize((inp_size, inp_size), interpolation=Image.NEAREST),
+                transforms.ToTensor(),
+            ])
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        img = self.dataset[idx]
+
+        return {
+            'inp': self.img_transform(img)
+        }
+
 
 @register('train')
 class TrainDataset(Dataset):
