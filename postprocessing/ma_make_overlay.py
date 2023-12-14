@@ -12,7 +12,11 @@ def run_overlay(img_folder_path, mask_folder_path, overlay_folder_path):
         mask_array = mask_array[:,:,0:1]
         overlayed = overlay(img_array, mask_array, (0,255,0), 0.4)
         clean_filename = cleanFilename(filename)
-        plt.imsave(f'{overlay_folder_path}/{clean_filename}.png',overlayed)
+        try:
+            plt.imsave(f'{overlay_folder_path}/{clean_filename}.png',overlayed)
+        except:
+            os.makedirs(overlay_folder_path)
+            plt.imsave(f'{overlay_folder_path}/{clean_filename}.png',overlayed)
 
 def cleanFilename(filename):
     split_list = filename.split('.')
