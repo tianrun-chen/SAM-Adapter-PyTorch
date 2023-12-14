@@ -30,7 +30,7 @@ import numpy as np
 from torch.optim import SGD, Adam, AdamW
 from tensorboardX import SummaryWriter
 
-import sod_metric
+from . import sod_metric
 class Averager():
 
     def __init__(self):
