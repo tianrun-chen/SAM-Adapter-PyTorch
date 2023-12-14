@@ -50,9 +50,29 @@ class DownloadOpenData:
         """ Downloads a list of tiles. """
         for tile in tqdm(tiles, desc='Downloading tiles'):
             self.download_open_data(tile[0], tile[1], out_dir)
+    
+    def check_utm_coos(self, x1: str, y1: str, x2: str, y2: str):
+        """ checks if coordinates are in bavaria and if they are in the right order """
+        x1 = int(x1)
+        x2 = int(x2)
+        y1 = int(y1)
+        y2 = int(y2)
+        # Bavaria UTM32 coordinates
+        xmin = 420176
+        xmax = 860102
+        ymin = 5232962
+        ymax = 5609147
+        if (xmin <= x1 >= xmax) or (xmin >= x2 >= xmax):
+            raise ValueError("x coordinates are not in Bavaria")
+        if (ymin <= y1 >= ymax) or (ymin <= y2 >= ymax):
+            raise ValueError("y coordinates are not in Bavaria")
+        if (x1 > x2) or (y1 > y2):
+            raise ValueError("x1 and y1 need to be smaller than x2 and y2")
 
     def calculate_and_download(self, x1: str, y1: str, x2: str, y2: str, out_dir: str):
         """ Calculates and downloads all tiles needed to cover the area of interest. """
+        print(x1,x2,y1,y2)
+        self.check_utm_coos(x1, y1, x2, y2)
         tiles = self.calculate_needed_tiles(x1, y1, x2, y2)
         self.download_list_of_tiles(tiles, out_dir)
 
