@@ -38,6 +38,8 @@ def make_data_loader(spec, tag=''):
 
 def make_data_loaders():
     train_loader = make_data_loader(config.get('train_dataset'), tag='train')
+    # train_loader = DataLoader(datasets.wrappers.TrainDataset(configs..  dataset, batch_size=spec['batch_size'],
+    #     shuffle=False, num_workers=8, pin_memory=True, sampler=sampler))
     val_loader = make_data_loader(config.get('val_dataset'), tag='val')
     return train_loader, val_loader
 
