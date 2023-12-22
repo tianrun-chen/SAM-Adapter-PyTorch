@@ -11,6 +11,8 @@ train_dataset:
     args:
       inp_size: 1024
       augment: false
+      interpolation_mode: "nearest"
+      resampling_factor: 4
   batch_size: 2
 
 val_dataset:
@@ -25,6 +27,8 @@ val_dataset:
     name: val
     args:
       inp_size: 1024
+      interpolation_mode: "nearest"
+      resampling_factor: 4
   batch_size: 1
 
 test_dataset:
@@ -39,17 +43,8 @@ test_dataset:
     name: val
     args:
       inp_size: 1024
-  batch_size: 1
-
-fw_dataset:
-  dataset:
-    name: image-folder
-    args:
-      path: ./forwardpass/data/split_img
-  wrapper:
-    name: fw
-    args:
-      inp_size: 1024
+      interpolation_mode: "nearest"
+      resampling_factor: 4
   batch_size: 1
 
 eval_type: cod
