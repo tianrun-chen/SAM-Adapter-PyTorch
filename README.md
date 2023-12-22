@@ -1,9 +1,24 @@
-Possible interpolation modes for resampling images
+# Environment:
+```bash
+pip install -r requirements.txt
+mim install mmcv
+```
 
-    NEAREST = "nearest"
-    BILINEAR = "bilinear"
-    BICUBIC = "bicubic"
-    # For PIL compatibility
-    BOX = "box"
-    HAMMING = "hamming"
-    LANCZOS = "lanczos"
+
+# Training:
+```python
+torchrun train.py --config configs/sam-vit-b.yaml
+```
+
+
+# Resampling Modes
+```python
+NEAREST = "nearest"
+BILINEAR = "bilinear"
+BICUBIC = "bicubic"
+# For PIL compatibility
+BOX = "box"
+HAMMING = "hamming"
+LANCZOS = "lanczos"
+```
+    
