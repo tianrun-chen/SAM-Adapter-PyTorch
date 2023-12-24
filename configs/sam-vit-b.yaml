@@ -9,10 +9,10 @@ train_dataset:
   wrapper:
     name: train
     args:
-      inp_size: 1024
+      inp_size: 256
       augment: false
       interpolation_mode: "nearest"
-      resampling_factor: 4
+      resampling_factor: 1
   batch_size: 2
 
 val_dataset:
@@ -26,9 +26,9 @@ val_dataset:
   wrapper:
     name: val
     args:
-      inp_size: 1024
+      inp_size: 256
       interpolation_mode: "nearest"
-      resampling_factor: 4
+      resampling_factor: 1
   batch_size: 1
 
 test_dataset:
@@ -42,9 +42,9 @@ test_dataset:
   wrapper:
     name: val
     args:
-      inp_size: 1024
+      inp_size: 256
       interpolation_mode: "nearest"
-      resampling_factor: 4
+      resampling_factor: 1
   batch_size: 1
 
 eval_type: cod
@@ -68,11 +68,11 @@ data_norm:
 model:
   name: sam
   args:
-    inp_size: 1024
+    inp_size: 256
     loss: iou
     encoder_mode:
       name: sam
-      img_size: 1024
+      img_size: 256
       mlp_ratio: 4
       patch_size: 16
       qkv_bias: true

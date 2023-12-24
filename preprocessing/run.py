@@ -28,13 +28,13 @@ class Run:
             save_.saveMask('data/rdy/masks', masks, filename)
 
 
-        proof = Proof('data/rdy/img', 'data/rdy/masks')
-        proof.is_empty_del(pct_empty)
+        # proof = Proof('data/rdy/img', 'data/rdy/masks')
+        # proof.is_empty_del(pct_empty)
 
-        test_train_split = TrainTestSplit
-        test_train_split.split('data/rdy/img','load/img')
+        # test_train_split = TrainTestSplit
+        # test_train_split.split('data/rdy/img','load/img')
 
-        test_train_split.split('data/rdy/masks','load/masks')
+        # test_train_split.split('data/rdy/masks','load/masks')
     
     def runSplit(split_images, split_masks, geojson, input_size, split_size, pct_empty):
         create_folderstructure.create_folders('all')

@@ -5,7 +5,6 @@ opencv-python~=4.7.0.72
 PyYAML~=6.0
 scikit-learn~=1.2.2
 scipy~=1.10.1
-
 tqdm~=4.51.0
 torch~=1.13.0+cu116
 numpy~=1.20.3
