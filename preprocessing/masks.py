@@ -7,7 +7,8 @@ from typing import List, Tuple
 
 from load_munich_ma import LoadMunich
 from bounding_box_ma import BoundingBox
-
+import argparse
+import os
 
 class MaskMaker:
     """This class looks for all files defined in the metadata, and
@@ -85,3 +86,31 @@ class MaskMaker:
         mask = poly_path.contains_points(coors)
 
         return mask.reshape(x_size, y_size).astype(float)
+    
+
+def main():
+    parser = argparse.ArgumentParser(description='Produce masks by processing geojson and image files.')
+    parser.add_argument('--image-folder', type=str, help='Path to the folder containing input images')
+    parser.add_argument('--geojson-folder', type=str, help='Path to the folder where geojson data is saved')
+    #parser.add_argument('--output-folder-images', type=str, help='Path to the folder where images will be saved')
+    #parser.add_argument('--output-folder-masks', type=str, help='Path to the folder where masks will be saved')
+    parser.add_argument('--city', type=str, default='munich', help='Name of the city')
+    parser.add_argument('--image-size', type=int, help='Size of the images')
+    parser.add_argument('--utm-size', type=int, help='Size of the utm tiles')
+
+    args = parser.parse_args()
+
+    image_folder = args.image_folder
+    geojson_folder = args.geojson_folder
+    #output_folder_images = args.output_folder_images
+    #output_folder_masks = args.output_folder_masks
+    city = args.city
+    image_size = args.image_size
+    utm_size = args.utm_size
+
+    for geojson_file in os.listdir(geojson_folder):
+            maskmaker = MaskMaker(os.path.join(geojson_folder,geojson_file), image_folder, city, (image_size, image_size), (utm_size, utm_size))
+            maskmaker.process()
+
+if __name__ == "__main__":
+    main()
