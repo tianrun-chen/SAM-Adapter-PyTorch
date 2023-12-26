@@ -2,10 +2,15 @@ import os
 import argparse
 import geopandas as gpd
 import rasterio
-from rasterio.mask import mask
+import rasterio.transform
+import rasterio.features
+import rasterio.shutil
 import numpy as np
-import xarray as xr
+import shapely.ops
+from shapely.geometry import Polygon
+from tqdm import tqdm
 
+# Generates Masks and pairs them with their respective images
 class Masker:
     def __init__(self, tif_folder, geojson_folder, output_image_folder, output_mask_folder):
         self.tif_folder = tif_folder
@@ -21,70 +26,78 @@ class Masker:
         geojson_files = [f for f in os.listdir(self.geojson_folder) if f.endswith('.geojson')]
         return [os.path.join(self.geojson_folder, f) for f in geojson_files]
 
-    def read_polygon_data(self, geojson_path):
-        return gpd.read_file(geojson_path)
-
-    def check_polygons_intersect(self, image_bounds, polygon_data):
-        converted = xr.
-        return polygon_data[polygon_data.geometry.intersects(image_bounds)]
-
-    def clip_image(self, src, intersecting_polygons):
-        return mask(src, intersecting_polygons.geometry, crop=True)
-
-    def save_clipped_image(self, output_image_path, clipped, src_profile):
-        with rasterio.open(output_image_path, 'w', **src_profile) as dst:
-            dst.write(clipped)
-
-    def create_binary_mask(self, clipped):
-        mask_array = np.zeros(clipped.shape, dtype=np.uint8)
-        mask_array[clipped.mask] = 1
-        return mask_array
-
-    def save_mask(self, mask_output_path, mask_array):
-        np.save(mask_output_path, mask_array)
-
-    def process_images(self):
+    def unify_crs(self, mask, image):
+        mask = mask.to_crs(image.crs)
+        return mask
+    
+    def create_mask_geometry(self, mask):
+        return gpd.GeoSeries(data=mask["geometry"], crs=mask.crs)
+    
+    def create_polygon_out_of_tile(self, bounds, crs):
+        left, bottom, right, top = bounds[0], bounds[1], bounds[2], bounds[3]
+        polygon_out_of_tile = Polygon.from_bounds(xmin = left, ymin = bottom, xmax = right, ymax = top)
+        return gpd.GeoSeries(data = polygon_out_of_tile, crs=crs)
+    
+    def create_intersection(self, mask_geom, polygon_out_of_tile):
+        df1 = gpd.GeoDataFrame({'geometry': polygon_out_of_tile})
+        df2 = gpd.GeoDataFrame({'geometry': mask_geom})
+        return  gpd.overlay(df1, df2, how='intersection')
+    
+    def paired_name(self, image_path):
+        return image_path.split(os.sep)[-1].split(".")[0]
+    
+    def save(self, image, unioned, paired_name):
+        
+        width, height = image.width, image.height
+        mask = np.zeros((height, width), dtype=np.uint8)
+        minx, miny, maxx, maxy = image.bounds
+        transform = rasterio.transform.from_bounds(minx, miny, maxx, maxy, width, height)
+        mask = rasterio.features.geometry_mask([unioned], transform=transform, invert=False, out_shape=(height, width))
+        
+        np.save(os.path.join(self.output_mask_folder,paired_name), mask)
+        rasterio.shutil.copy(image, os.path.join(self.output_image_folder,paired_name), driver='GTiff')
+    
+    def process(self):
+        
         image_paths = self.get_image_paths()
         geojson_paths = self.get_geojson_paths()
 
         os.makedirs(self.output_image_folder, exist_ok=True)
         os.makedirs(self.output_mask_folder, exist_ok=True)
 
-        for geojson_path in geojson_paths:
-            polygon_data = self.read_polygon_data(geojson_path)
+        for geojson_path in tqdm(geojson_paths, desc="Generatig masks and pairing them with their respective images", position=0):
+            
+            mask = gpd.read_file(geojson_path)
 
-            for image_path in image_paths:
+
+            for image_path in tqdm(image_paths, desc= "Processing image", leave=False, position=1):
                 with rasterio.open(image_path) as src:
-                    image_bounds = src.bounds
-                    intersecting_polygons = self.check_polygons_intersect(image_bounds, polygon_data)
+                    
+                    mask = self.unify_crs(mask, src)
 
-                    if intersecting_polygons.empty:
-                        print(f"No intersecting polygons found for {image_path}. Skipping...")
+                    mask_geom = self.create_mask_geometry(mask)
+                    polygon_out_of_tile = self.create_polygon_out_of_tile(src.bounds, mask_geom.crs)
+
+                    intersection = self.create_intersection(mask_geom, polygon_out_of_tile)
+                    if intersection.empty:
                         continue
 
-                    clipped, _ = self.clip_image(src, intersecting_polygons)
+                    unioned = shapely.ops.unary_union(intersection["geometry"])
+                    self.save(image=src, unioned=unioned, paired_name=self.paired_name(image_path))
+                    
 
-                    # Save the clipped image
-                    output_image_path = os.path.join(self.output_image_folder, os.path.basename(image_path))
-                    self.save_clipped_image(output_image_path, clipped, src.profile)
 
-                    # Save the mask
-                    mask_array = self.create_binary_mask(clipped)
-                    mask_output_path = os.path.join(
-                        self.output_mask_folder, f"{os.path.splitext(os.path.basename(image_path))[0]}_mask.npy"
-                    )
-                    self.save_mask(mask_output_path, mask_array)
 
 def main():
-    parser = argparse.ArgumentParser(description="Process images and generate masks based on GeoJSON polygons.")
-    parser.add_argument("--tif_folder", help="Path to the folder containing TIFF images.")
-    parser.add_argument("--geojson_folder", help="Path to the folder containing GeoJSON files.")
-    parser.add_argument("--output_image_folder", help="Path to the output folder for processed images.")
-    parser.add_argument("--output_mask_folder", help="Path to the output folder for generated masks.")
+    parser = argparse.ArgumentParser(description="Generate masks from images based on GeoJSON polygons.")
+    parser.add_argument("--tif-folder", help="Path to the folder containing TIFF images.")
+    parser.add_argument("--geojson-folder", help="Path to the folder containing GeoJSON files.")
+    parser.add_argument("--output-image-folder", default= "images_preprocessed_non_split",help="Path to the output folder for processed images.")
+    parser.add_argument("--output-mask-folder", default= "masks_preprocessed_non_split",help="Path to the output folder for generated masks.")
     args = parser.parse_args()
 
     masker = Masker(args.tif_folder, args.geojson_folder, args.output_image_folder, args.output_mask_folder)
-    masker.process_images()
+    masker.process()
 
 if __name__ == "__main__":
     main()
