@@ -33,16 +33,6 @@ class Masker:
     def create_mask_geometry(self, mask):
         return gpd.GeoSeries(data=mask["geometry"], crs=mask.crs)
     
-    def create_polygon_out_of_tile(self, bounds, crs):
-        left, bottom, right, top = bounds[0], bounds[1], bounds[2], bounds[3]
-        polygon_out_of_tile = Polygon.from_bounds(xmin = left, ymin = bottom, xmax = right, ymax = top)
-        return gpd.GeoSeries(data = polygon_out_of_tile, crs=crs)
-    
-    def create_intersection(self, mask_geom, polygon_out_of_tile):
-        df1 = gpd.GeoDataFrame({'geometry': polygon_out_of_tile})
-        df2 = gpd.GeoDataFrame({'geometry': mask_geom})
-        return  gpd.overlay(df1, df2, how='intersection')
-    
     def paired_name(self, image_path):
         return image_path.split(os.sep)[-1].split(".")[0]
     
@@ -65,27 +55,23 @@ class Masker:
         os.makedirs(self.output_image_folder, exist_ok=True)
         os.makedirs(self.output_mask_folder, exist_ok=True)
 
-        for geojson_path in tqdm(geojson_paths, desc="Generatig masks and pairing them with their respective images", position=0):
-            
-            mask = gpd.read_file(geojson_path)
+        for image_path in tqdm(image_paths, desc="Processing images", position=0):
 
+            with rasterio.open(image_path) as src:
+                for geojson_path in tqdm(geojson_paths, desc="Generating masks and pairing them with their respective images", leave=False, position=1):
+                    
+                    bbox = src.bounds
+                    mask = gpd.read_file(geojson_path, bbox=bbox)
 
-            for image_path in tqdm(image_paths, desc= "Processing image", leave=False, position=1):
-                with rasterio.open(image_path) as src:
+                    if mask.empty:
+                        continue
                     
                     mask = self.unify_crs(mask, src)
 
                     mask_geom = self.create_mask_geometry(mask)
-                    polygon_out_of_tile = self.create_polygon_out_of_tile(src.bounds, mask_geom.crs)
-
-                    intersection = self.create_intersection(mask_geom, polygon_out_of_tile)
-                    if intersection.empty:
-                        continue
-
-                    unioned = shapely.ops.unary_union(intersection["geometry"])
+        
+                    unioned = shapely.ops.unary_union(mask_geom)
                     self.save(image=src, unioned=unioned, paired_name=self.paired_name(image_path))
-                    
-
 
 
 def main():
