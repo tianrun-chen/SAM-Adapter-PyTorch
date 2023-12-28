@@ -1,9 +1,0 @@
-geopandas
-rasterio
-numpy
-tqdm
-jupyter
-folium
-mapclassify
-matplotlib
-Pillow

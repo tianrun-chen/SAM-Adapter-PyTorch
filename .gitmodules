@@ -1,0 +1,3 @@
+[submodule "GeoPatchify"]
+	path = GeoPatchify
+	url = https://github.com/kandelak/GeoPatchify.git
