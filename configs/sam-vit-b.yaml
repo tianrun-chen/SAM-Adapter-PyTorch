@@ -9,7 +9,7 @@ train_dataset:
   wrapper:
     name: train
     args:
-      inp_size: 256
+      inp_size: 1024
       augment: false
       interpolation_mode: "nearest"
       resampling_factor: 1
@@ -26,7 +26,7 @@ val_dataset:
   wrapper:
     name: val
     args:
-      inp_size: 256
+      inp_size: 1024
       interpolation_mode: "nearest"
       resampling_factor: 1
   batch_size: 1
@@ -42,7 +42,7 @@ test_dataset:
   wrapper:
     name: val
     args:
-      inp_size: 256
+      inp_size: 1024
       interpolation_mode: "nearest"
       resampling_factor: 1
   batch_size: 1
@@ -68,22 +68,22 @@ data_norm:
 model:
   name: sam
   args:
-    inp_size: 256
+    inp_size: 102
     loss: iou
     encoder_mode:
       name: sam
-      img_size: 256
+      img_size: 1024
       mlp_ratio: 4
       patch_size: 16
       qkv_bias: true
       use_rel_pos: true
       window_size: 14
-      out_chans: 256
+      out_chans: 1024
       scale_factor: 32
       input_type: fft
       freq_nums: 0.25
       prompt_type: highpass
-      prompt_embed_dim: 256
+      prompt_embed_dim: 1024
       tuning_stage: 1234
       handcrafted_tune: true
       embedding_tune: true
