@@ -161,7 +161,7 @@ def calc_f1(y_pred,y_true):
         y_pred = y_pred.cpu().numpy()
         for i in range(batchsize):
             true = y_true[i].flatten()
-            true = true.astype(np.int)
+            true = true.astype(int)
             pred = y_pred[i].flatten()
 
             precision, recall, thresholds = precision_recall_curve(true, pred)

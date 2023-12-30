@@ -34,12 +34,14 @@ def tensor2PIL(tensor):
     return toPIL(tensor)
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# device = torch.device("cpu")
 
 def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
               verbose=False):
     model.eval()
+    device = model.device
     if data_norm is None:
         data_norm = {
             'inp': {'sub': [0], 'div': [1]},
@@ -66,14 +68,31 @@ def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
 
     pbar = tqdm(loader, leave=False, desc='val')
 
+    cnt = 0
     for batch in pbar:
         for k, v in batch.items():
-            batch[k] = v.cuda()
+            batch[k] = v.to(device)
 
         inp = batch['inp']
 
         pred = torch.sigmoid(model.infer(inp))
 
+        # Save predicted images as png files    
+        
+        pred_mask = pred.cpu()
+        pred_mask = pred_mask.squeeze(0)
+        pred_mask = tensor2PIL(pred_mask)
+       
+        pred_mask.save(f'predicted/pred_{cnt}.png')
+        
+        gt_img = batch['gt']
+        gt_img = gt_img.cpu()
+        gt_img = gt_img.squeeze(0)
+        gt_img = tensor2PIL(gt_img)
+        gt_img.save(f'predicted/gt_{cnt}.png')
+
+        cnt += 1
+        
         result1, result2, result3, result4 = metric_fn(pred, batch['gt'])
         val_metric1.add(result1.item(), inp.shape[0])
         val_metric2.add(result2.item(), inp.shape[0])
@@ -104,8 +123,11 @@ if __name__ == '__main__':
     loader = DataLoader(dataset, batch_size=spec['batch_size'],
                         num_workers=8)
 
-    model = models.make(config['model']).cuda()
-    sam_checkpoint = torch.load(args.model, map_location='cuda:0')
+    model = models.make(config['model'])
+    device = model.device
+    
+    model = model.to(device)
+    sam_checkpoint = torch.load(args.model, map_location=device)
     model.load_state_dict(sam_checkpoint, strict=True)
     
     metric1, metric2, metric3, metric4 = eval_psnr(loader, model,

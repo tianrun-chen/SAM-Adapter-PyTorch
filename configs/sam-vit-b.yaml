@@ -47,7 +47,7 @@ test_dataset:
       resampling_factor: 1
   batch_size: 1
 
-eval_type: cod
+eval_type: f1
 sam_checkpoint: ./pretrained/sam_vit_b_01ec64.pth
 data_norm:
   inp:
@@ -68,8 +68,9 @@ data_norm:
 model:
   name: sam
   args:
-    inp_size: 102
+    inp_size: 1024
     loss: iou
+    device: cpu
     encoder_mode:
       name: sam
       img_size: 1024
@@ -78,12 +79,12 @@ model:
       qkv_bias: true
       use_rel_pos: true
       window_size: 14
-      out_chans: 1024
+      out_chans: 256
       scale_factor: 32
       input_type: fft
       freq_nums: 0.25
       prompt_type: highpass
-      prompt_embed_dim: 1024
+      prompt_embed_dim: 256
       tuning_stage: 1234
       handcrafted_tune: true
       embedding_tune: true

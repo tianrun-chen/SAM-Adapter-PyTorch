@@ -13,10 +13,15 @@ from statistics import mean
 import torch
 import torch.distributed as dist
 
-torch.distributed.init_process_group(backend='nccl')
-local_rank = torch.distributed.get_rank()
-torch.cuda.set_device(local_rank)
-device = torch.device("cuda", local_rank)
+
+
+def init_process_group():
+    torch.distributed.init_process_group(backend='nccl')
+    local_rank = torch.distributed.get_rank()
+    torch.cuda.set_device(local_rank)
+
+
+# device = torch.device("cuda", local_rank)
 
 
 def make_data_loader(spec, tag=''):
@@ -29,8 +34,10 @@ def make_data_loader(spec, tag=''):
         log('{} dataset: size={}'.format(tag, len(dataset)))
         for k, v in dataset[0].items():
             log('  {}: shape={}'.format(k, tuple(v.shape)))
-
-    sampler = torch.utils.data.distributed.DistributedSampler(dataset)
+    
+    sampler = None
+    if device == 'cuda':
+        sampler = torch.utils.data.distributed.DistributedSampler(dataset)
     loader = DataLoader(dataset, batch_size=spec['batch_size'],
         shuffle=False, num_workers=8, pin_memory=True, sampler=sampler)
     return loader
@@ -69,7 +76,7 @@ def eval_psnr(loader, model, eval_type=None):
     gt_list = []
     for batch in loader:
         for k, v in batch.items():
-            batch[k] = v.cuda()
+            batch[k] = v.to(model.device)
 
         inp = batch['inp']
 
@@ -97,12 +104,15 @@ def eval_psnr(loader, model, eval_type=None):
 
 def prepare_training():
     if config.get('resume') is not None:
-        model = models.make(config['model']).cuda()
+        model = models.make(config['model'])
+        model.to(model.device)
+        
         optimizer = utils.make_optimizer(
             model.parameters(), config['optimizer'])
         epoch_start = config.get('resume') + 1
     else:
-        model = models.make(config['model']).cuda()
+        model = models.make(config['model'])
+        model.to(model.device)
         optimizer = utils.make_optimizer(
             model.parameters(), config['optimizer'])
         epoch_start = 1
@@ -124,13 +134,18 @@ def train(train_loader, model):
     loss_list = []
     for batch in train_loader:
         for k, v in batch.items():
-            batch[k] = v.to(device)
+            batch[k] = v.to(model.device)
         inp = batch['inp']
         gt = batch['gt']
         model.set_input(inp, gt)
         model.optimize_parameters()
-        batch_loss = [torch.zeros_like(model.loss_G) for _ in range(dist.get_world_size())]
-        dist.all_gather(batch_loss, model.loss_G)
+
+        if model.device == 'cuda': 
+            batch_loss = [torch.zeros_like(model.loss_G) for _ in range(dist.get_world_size())]
+            dist.all_gather(batch_loss, model.loss_G)
+        else:
+            batch_loss = [torch.zeros_like(model.loss_G)]
+        
         loss_list.extend(batch_loss)
         if pbar is not None:
             pbar.update(1)
@@ -160,15 +175,15 @@ def main(config_, save_path, args):
     model.optimizer = optimizer
     lr_scheduler = CosineAnnealingLR(model.optimizer, config['epoch_max'], eta_min=config.get('lr_min'))
 
-    model = model.cuda()
-    model = torch.nn.parallel.DistributedDataParallel(
-        model,
-        device_ids=[args.local_rank],
-        output_device=args.local_rank,
-        find_unused_parameters=True,
-        broadcast_buffers=False
-    )
-    model = model.module
+    if model.device == 'cuda':
+        model = torch.nn.parallel.DistributedDataParallel(
+            model,
+            device_ids=[args.local_rank],
+            output_device=args.local_rank,
+            find_unused_parameters=True,
+            broadcast_buffers=False
+        )
+        model = model.module
 
     sam_checkpoint = torch.load(config['sam_checkpoint'])
     model.load_state_dict(sam_checkpoint, strict=False)
@@ -186,7 +201,8 @@ def main(config_, save_path, args):
     max_val_v = -1e18 if config['eval_type'] != 'ber' else 1e8
     timer = utils.Timer()
     for epoch in range(epoch_start, epoch_max + 1):
-        train_loader.sampler.set_epoch(epoch)
+        if model.device == 'cuda':
+            train_loader.sampler.set_epoch(epoch)
         t_epoch_start = timer.t()
         train_loss_G = train(train_loader, model)
         lr_scheduler.step()
@@ -260,8 +276,16 @@ if __name__ == '__main__':
 
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-        if local_rank == 0:
-            print('config loaded.')
+    
+    global local_rank, device
+    local_rank = args.local_rank
+    device = config['model']['args']['device']
+    
+    if  device == 'cuda':
+            init_process_group()
+    else:
+        local_rank = 0
+        print("Config loaded.")
 
     save_name = args.name
     if save_name is None:

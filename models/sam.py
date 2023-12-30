@@ -92,9 +92,10 @@ class PositionEmbeddingRandom(nn.Module):
 
 @register('sam')
 class SAM(nn.Module):
-    def __init__(self, inp_size=None, encoder_mode=None, loss=None):
+    def __init__(self, inp_size=None, encoder_mode=None, loss=None, device='cuda'):
         super().__init__()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        self.device = torch.device(device)
         self.embed_dim = encoder_mode['embed_dim']
         self.image_encoder = ImageEncoderViT(
             img_size=inp_size,
