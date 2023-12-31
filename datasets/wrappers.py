@@ -36,6 +36,13 @@ class ValDataset(Dataset):
                 transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
             ])
+        
+        self.inverse_transform = transforms.Compose([
+                transforms.Normalize(mean=[0., 0., 0.],
+                                     std=[1/0.229, 1/0.224, 1/0.225]),
+                transforms.Normalize(mean=[-0.485, -0.456, -0.406],
+                                     std=[1, 1, 1])
+            ])
         self.mask_transform = transforms.Compose([
                 transforms.Resize((inp_size, inp_size), interpolation=Image.NEAREST),
                 Resampler(inp_size = inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),

@@ -12,7 +12,8 @@ import utils
 
 from torchvision import transforms
 from mmcv.runner import load_checkpoint
-
+import metric
+from PIL import Image
 
 def batched_predict(model, inp, coord, bsize):
     with torch.no_grad():
@@ -33,87 +34,65 @@ def tensor2PIL(tensor):
     toPIL = transforms.ToPILImage()
     return toPIL(tensor)
 
+def write_metrics(values, means, i):
+    jaccard, dice, accuracy, precision, recall, specificity = values
+    writer.add_scalar('jaccard', jaccard, global_step=i)
+    writer.add_scalar('dice', dice, global_step=i)
+    writer.add_scalar('accuracy', accuracy, global_step=i)
+    writer.add_scalar('precision', precision, global_step=i)
+    writer.add_scalar('recall', recall, global_step=i)
+    writer.add_scalar('specificity', specificity, global_step=i)
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def create_overlay_plot(inp, mask):
+    inp = tensor2PIL(inp.squeeze(0))
+    mask = tensor2PIL(mask.squeeze(0))
 
-# device = torch.device("cpu")
+    mask = mask.convert('RGB')
+    out = Image.blend(inp, mask, 0.5)
+    return transforms.ToTensor()(out)
 
-def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
-              verbose=False):
-    model.eval()
+
+def test(loader, model):
+    
     device = model.device
-    if data_norm is None:
-        data_norm = {
-            'inp': {'sub': [0], 'div': [1]},
-            'gt': {'sub': [0], 'div': [1]}
-        }
-
-    if eval_type == 'f1':
-        metric_fn = utils.calc_f1
-        metric1, metric2, metric3, metric4 = 'f1', 'auc', 'none', 'none'
-    elif eval_type == 'fmeasure':
-        metric_fn = utils.calc_fmeasure
-        metric1, metric2, metric3, metric4 = 'f_mea', 'mae', 'none', 'none'
-    elif eval_type == 'ber':
-        metric_fn = utils.calc_ber
-        metric1, metric2, metric3, metric4 = 'shadow', 'non_shadow', 'ber', 'none'
-    elif eval_type == 'cod':
-        metric_fn = utils.calc_cod
-        metric1, metric2, metric3, metric4 = 'sm', 'em', 'wfm', 'mae'
-
-    val_metric1 = utils.Averager()
-    val_metric2 = utils.Averager()
-    val_metric3 = utils.Averager()
-    val_metric4 = utils.Averager()
-
+    model.eval()
+    
     pbar = tqdm(loader, leave=False, desc='val')
-
-    cnt = 0
-    for batch in pbar:
+    
+    for i, batch in enumerate(pbar):
         for k, v in batch.items():
             batch[k] = v.to(device)
 
-        inp = batch['inp']
+        metrics.reset()
 
+        inp = batch['inp']
+        gt = batch['gt']
+        gt = (gt>0).int()
         pred = torch.sigmoid(model.infer(inp))
 
-        # Save predicted images as png files    
-        
-        pred_mask = pred.cpu()
-        pred_mask = pred_mask.squeeze(0)
-        pred_mask = tensor2PIL(pred_mask)
-       
-        pred_mask.save(f'predicted/pred_{cnt}.png')
-        
-        gt_img = batch['gt']
-        gt_img = gt_img.cpu()
-        gt_img = gt_img.squeeze(0)
-        gt_img = tensor2PIL(gt_img)
-        gt_img.save(f'predicted/gt_{cnt}.png')
-
-        cnt += 1
-        
-        result1, result2, result3, result4 = metric_fn(pred, batch['gt'])
-        val_metric1.add(result1.item(), inp.shape[0])
-        val_metric2.add(result2.item(), inp.shape[0])
-        val_metric3.add(result3.item(), inp.shape[0])
-        val_metric4.add(result4.item(), inp.shape[0])
-
-        if verbose:
-            pbar.set_description('val {} {:.4f}'.format(metric1, val_metric1.item()))
-            pbar.set_description('val {} {:.4f}'.format(metric2, val_metric2.item()))
-            pbar.set_description('val {} {:.4f}'.format(metric3, val_metric3.item()))
-            pbar.set_description('val {} {:.4f}'.format(metric4, val_metric4.item()))
-
-    return val_metric1.item(), val_metric2.item(), val_metric3.item(), val_metric4.item()
-
+        metrics.update(pred, gt)
+        metric_values = metrics.compute_values(pred, gt)
+        write_metrics(metric_values, None, i)
+        writer.add_pr_curve('PR Curve', gt, pred, global_step=i)
+        if i % 5 == 0:
+            inversed = inverse_transform(inp)
+            plot_pred = create_overlay_plot(inversed, pred)
+            plot_gt = create_overlay_plot(inversed, gt)
+            writer.add_image('Prediction Overlay', plot_pred, global_step=i)
+            writer.add_image('Ground Truth Overlay', plot_gt, global_step=i)
+     
+     
 
 if __name__ == '__main__':
+    global log, writer, metrics
+    metrics = metric.Metric()
     parser = argparse.ArgumentParser()
     parser.add_argument('--config')
     parser.add_argument('--model')
     parser.add_argument('--prompt', default='none')
     args = parser.parse_args()
+
+    log, writer = utils.set_save_path(os.path.join("save","test"), remove=False)
 
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -122,6 +101,9 @@ if __name__ == '__main__':
     dataset = datasets.make(spec['wrapper'], args={'dataset': dataset})
     loader = DataLoader(dataset, batch_size=spec['batch_size'],
                         num_workers=8)
+    
+    global inverse_transform
+    inverse_transform = dataset.inverse_transform
 
     model = models.make(config['model'])
     device = model.device
@@ -130,12 +112,4 @@ if __name__ == '__main__':
     sam_checkpoint = torch.load(args.model, map_location=device)
     model.load_state_dict(sam_checkpoint, strict=True)
     
-    metric1, metric2, metric3, metric4 = eval_psnr(loader, model,
-                                                   data_norm=config.get('data_norm'),
-                                                   eval_type=config.get('eval_type'),
-                                                   eval_bsize=config.get('eval_bsize'),
-                                                   verbose=True)
-    print('metric1: {:.4f}'.format(metric1))
-    print('metric2: {:.4f}'.format(metric2))
-    print('metric3: {:.4f}'.format(metric3))
-    print('metric4: {:.4f}'.format(metric4))
+    test(loader, model)

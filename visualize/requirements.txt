@@ -6,3 +6,4 @@ Pillow
 tensorboard
 ipykernel
 pyyaml
+torchmetrics
