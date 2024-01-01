@@ -12,8 +12,8 @@ train_dataset:
       inp_size: 1024
       augment: false
       interpolation_mode: "nearest"
-      resampling_factor: 1
-  batch_size: 2
+      resampling_factor: 8
+  batch_size: 1
 
 val_dataset:
   dataset:
@@ -28,7 +28,7 @@ val_dataset:
     args:
       inp_size: 1024
       interpolation_mode: "nearest"
-      resampling_factor: 1
+      resampling_factor: 4
   batch_size: 1
 
 test_dataset:
@@ -108,8 +108,12 @@ multi_step_lr:
   milestones:
   - 1
   gamma: 0.1
-#epoch_val: 1
+epoch_val: 1
 epoch_save: 1
 
+# For basic logging
+log_dir: ./save/
+# For Tensorboard
+write_dir: ./save/
 #resume: 1
 #start_epoch: 1
