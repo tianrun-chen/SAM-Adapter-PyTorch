@@ -29,9 +29,7 @@ class Metric:
         for metric in self.metrics:
             metric.update(pred, target)
     
-    def compute_values(self, pred, target):
-        self.update(pred, target)
-
+    def compute_values(self):
         metric_values = []
         for metric in self.metrics:
             metric_values.append(metric.compute())

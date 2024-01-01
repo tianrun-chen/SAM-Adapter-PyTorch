@@ -12,17 +12,21 @@ import utils
 from statistics import mean
 import torch
 import torch.distributed as dist
-
-
+from torchvision import transforms
+import metric
+import writer 
 
 def init_process_group():
     torch.distributed.init_process_group(backend='nccl')
     local_rank = torch.distributed.get_rank()
     torch.cuda.set_device(local_rank)
 
-
-# device = torch.device("cuda", local_rank)
-
+def make_data_loaders():
+    train_loader = make_data_loader(config.get('train_dataset'), tag='train')
+    # train_loader = DataLoader(datasets.wrappers.TrainDataset(configs..  dataset, batch_size=spec['batch_size'],
+    #     shuffle=False, num_workers=8, pin_memory=True, sampler=sampler))
+    val_loader = make_data_loader(config.get('val_dataset'), tag='val')
+    return train_loader, val_loader
 
 def make_data_loader(spec, tag=''):
     if spec is None:
@@ -43,64 +47,6 @@ def make_data_loader(spec, tag=''):
     return loader
 
 
-def make_data_loaders():
-    train_loader = make_data_loader(config.get('train_dataset'), tag='train')
-    # train_loader = DataLoader(datasets.wrappers.TrainDataset(configs..  dataset, batch_size=spec['batch_size'],
-    #     shuffle=False, num_workers=8, pin_memory=True, sampler=sampler))
-    val_loader = make_data_loader(config.get('val_dataset'), tag='val')
-    return train_loader, val_loader
-
-
-def eval_psnr(loader, model, eval_type=None):
-    model.eval()
-
-    if eval_type == 'f1':
-        metric_fn = utils.calc_f1
-        metric1, metric2, metric3, metric4 = 'f1', 'auc', 'none', 'none'
-    elif eval_type == 'fmeasure':
-        metric_fn = utils.calc_fmeasure
-        metric1, metric2, metric3, metric4 = 'f_mea', 'mae', 'none', 'none'
-    elif eval_type == 'ber':
-        metric_fn = utils.calc_ber
-        metric1, metric2, metric3, metric4 = 'shadow', 'non_shadow', 'ber', 'none'
-    elif eval_type == 'cod':
-        metric_fn = utils.calc_cod
-        metric1, metric2, metric3, metric4 = 'sm', 'em', 'wfm', 'mae'
-
-    if local_rank == 0:
-        pbar = tqdm(total=len(loader), leave=False, desc='val')
-    else:
-        pbar = None
-
-    pred_list = []
-    gt_list = []
-    for batch in loader:
-        for k, v in batch.items():
-            batch[k] = v.to(model.device)
-
-        inp = batch['inp']
-
-        pred = torch.sigmoid(model.infer(inp))
-
-        batch_pred = [torch.zeros_like(pred) for _ in range(dist.get_world_size())]
-        batch_gt = [torch.zeros_like(batch['gt']) for _ in range(dist.get_world_size())]
-
-        dist.all_gather(batch_pred, pred)
-        pred_list.extend(batch_pred)
-        dist.all_gather(batch_gt, batch['gt'])
-        gt_list.extend(batch_gt)
-        if pbar is not None:
-            pbar.update(1)
-
-    if pbar is not None:
-        pbar.close()
-
-    pred_list = torch.cat(pred_list, 1)
-    gt_list = torch.cat(gt_list, 1)
-    result1, result2, result3, result4 = metric_fn(pred_list, gt_list)
-
-    return result1, result2, result3, result4, metric1, metric2, metric3, metric4
-
 
 def prepare_training():
     if config.get('resume') is not None:
@@ -118,10 +64,54 @@ def prepare_training():
         epoch_start = 1
     max_epoch = config.get('epoch_max')
     lr_scheduler = CosineAnnealingLR(optimizer, max_epoch, eta_min=config.get('lr_min'))
-    if local_rank == 0:
-        log('model: #params={}'.format(utils.compute_num_params(model, text=True)))
+    
     return model, optimizer, epoch_start, lr_scheduler
 
+
+
+
+def eval(loader, model):
+    model.eval()
+
+    if local_rank == 0:
+        pbar = tqdm(total=len(loader), leave=False, desc='val')
+    else:
+        pbar = None
+
+    
+    for i, batch in enumerate(loader):
+        for k, v in batch.items():
+            batch[k] = v.to(model.device)
+
+        inp = batch['inp']
+
+        pred = torch.sigmoid(model.infer(inp))
+
+        batch_pred = []
+        batch_gt = []
+
+        if model.device == 'cuda':
+            batch_pred = [torch.zeros_like(pred) for _ in range(dist.get_world_size())]
+            batch_gt = [torch.zeros_like(batch['gt']) for _ in range(dist.get_world_size())]
+
+            dist.all_gather(batch_pred, pred)
+            dist.all_gather(batch_gt, batch['gt'])
+        else:
+            batch_pred = pred
+            batch_gt = batch['gt']
+        
+        batched_gt = (batched_gt>0).int()
+        metrics.update(batch_pred, batch_gt)
+        metric_values = metrics.compute_values()
+        
+        writer_wrapper.write_metrics(metric_values, None, i)
+        writer_wrapper.write_pr_curve(batch_pred, batch_gt, i)
+
+        if pbar is not None:
+            pbar.update(1)
+
+    if pbar is not None:
+        pbar.close()
 
 def train(train_loader, model):
     model.train()
@@ -132,6 +122,7 @@ def train(train_loader, model):
         pbar = None
 
     loss_list = []
+    
     for batch in train_loader:
         for k, v in batch.items():
             batch[k] = v.to(model.device)
@@ -158,18 +149,18 @@ def train(train_loader, model):
 
 
 def main(config_, save_path, args):
-    global config, log, writer, log_info
+    global config, log, writer_, log_info, writer_wrapper
+
+    # TODO merge writers, OOP for train and test
+    writer_wrapper = writer.Writer(os.path.join(save_path, 'train'))
+    
     config = config_
-    log, writer = utils.set_save_path(save_path, remove=False)
+    log, writer_ = utils.set_save_path(save_path, remove=False)
     with open(os.path.join(save_path, 'config.yaml'), 'w') as f:
         yaml.dump(config, f, sort_keys=False)
 
     train_loader, val_loader = make_data_loaders()
-    if config.get('data_norm') is None:
-        config['data_norm'] = {
-            'inp': {'sub': [0], 'div': [1]},
-            'gt': {'sub': [0], 'div': [1]}
-        }
+    
 
     model, optimizer, epoch_start, lr_scheduler = prepare_training()
     model.optimizer = optimizer
@@ -201,6 +192,9 @@ def main(config_, save_path, args):
     max_val_v = -1e18 if config['eval_type'] != 'ber' else 1e8
     timer = utils.Timer()
     for epoch in range(epoch_start, epoch_max + 1):
+
+        eval(val_loader, model)
+
         if model.device == 'cuda':
             train_loader.sampler.set_epoch(epoch)
         t_epoch_start = timer.t()
@@ -209,9 +203,9 @@ def main(config_, save_path, args):
 
         if local_rank == 0:
             log_info = ['epoch {}/{}'.format(epoch, epoch_max)]
-            writer.add_scalar('lr', optimizer.param_groups[0]['lr'], epoch)
+            writer_.add_scalar('lr', optimizer.param_groups[0]['lr'], epoch)
             log_info.append('train G: loss={:.4f}'.format(train_loss_G))
-            writer.add_scalars('loss', {'train G': train_loss_G}, epoch)
+            writer_.add_scalars('loss', {'train G': train_loss_G}, epoch)
 
             model_spec = config['model']
             model_spec['sd'] = model.state_dict()
@@ -221,28 +215,9 @@ def main(config_, save_path, args):
             save(config, model, save_path, 'last')
 
         if (epoch_val is not None) and (epoch % epoch_val == 0):
-            result1, result2, result3, result4, metric1, metric2, metric3, metric4 = eval_psnr(val_loader, model,
-                eval_type=config.get('eval_type'))
-
-            if local_rank == 0:
-                log_info.append('val: {}={:.4f}'.format(metric1, result1))
-                writer.add_scalars(metric1, {'val': result1}, epoch)
-                log_info.append('val: {}={:.4f}'.format(metric2, result2))
-                writer.add_scalars(metric2, {'val': result2}, epoch)
-                log_info.append('val: {}={:.4f}'.format(metric3, result3))
-                writer.add_scalars(metric3, {'val': result3}, epoch)
-                log_info.append('val: {}={:.4f}'.format(metric4, result4))
-                writer.add_scalars(metric4, {'val': result4}, epoch)
-
-                if config['eval_type'] != 'ber':
-                    if result1 > max_val_v:
-                        max_val_v = result1
-                        save(config, model, save_path, 'best')
-                else:
-                    if result3 < max_val_v:
-                        max_val_v = result3
-                        save(config, model, save_path, 'best')
-
+           
+                # TODO save best model according to the metric
+                eval(val_loader, model)
                 t = timer.t()
                 prog = (epoch - epoch_start + 1) / (epoch_max - epoch_start + 1)
                 t_epoch = utils.time_text(t - t_epoch_start)
@@ -250,7 +225,7 @@ def main(config_, save_path, args):
                 log_info.append('{} {}/{}'.format(t_epoch, t_elapsed, t_all))
 
                 log(', '.join(log_info))
-                writer.flush()
+                writer_.flush()
 
 
 def save(config, model, save_path, name):
@@ -277,7 +252,9 @@ if __name__ == '__main__':
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     
-    global local_rank, device
+    global local_rank, device, metrics, writer_
+
+    metrics = metric.Metric()
     local_rank = args.local_rank
     device = config['model']['args']['device']
     

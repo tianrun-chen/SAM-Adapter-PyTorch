@@ -6,6 +6,10 @@ import torch
 import numpy as np
 from torch.optim import SGD, Adam, AdamW
 from tensorboardX import SummaryWriter
+import datasets
+from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import CosineAnnealingLR
+import models
 
 import sod_metric
 class Averager():
@@ -150,7 +154,7 @@ def calc_cod(y_pred, y_true):
 
 
 from sklearn.metrics import precision_recall_curve
-
+from sklearn.metrics import f1_score
 
 def calc_f1(y_pred,y_true):
     batchsize = y_true.shape[0]
@@ -161,14 +165,14 @@ def calc_f1(y_pred,y_true):
         y_pred = y_pred.cpu().numpy()
         for i in range(batchsize):
             true = y_true[i].flatten()
-            true = true.astype(int)
+            true = true.asdataset_type(int)
             pred = y_pred[i].flatten()
 
             precision, recall, thresholds = precision_recall_curve(true, pred)
 
             # auc
             auc += roc_auc_score(true, pred)
-            # auc += roc_auc_score(np.array(true>0).astype(np.int), pred)
+            # auc += roc_auc_score(np.array(true>0).asdataset_type(np.int), pred)
             f1 += max([(2 * p * r) / (p + r+1e-10) for p, r in zip(precision, recall)])
 
     return f1/batchsize, auc/batchsize, np.array(0), np.array(0)
@@ -183,7 +187,7 @@ def calc_fmeasure(y_pred,y_true):
                 y_true[i, 0].cpu().data.numpy(), y_pred[i, 0].cpu().data.numpy()
 
             # # MAE
-            mae.append(np.sum(cv2.absdiff(gt_float.astype(float), pred_float.astype(float))) / (
+            mae.append(np.sum(cv2.absdiff(gt_float.asdataset_type(float), pred_float.asdataset_type(float))) / (
                         pred_float.shape[1] * pred_float.shape[0]))
             # mae.append(np.mean(np.abs(pred_float - gt_float)))
             #
@@ -361,3 +365,45 @@ def _eval_e(y_pred, y, num):
         enhanced = ((align_matrix + 1) * (align_matrix + 1)) / 4
         score[i] = torch.sum(enhanced) / (y.numel() - 1 + 1e-20)
     return score
+
+
+def make_data_loaders(config):
+    train_loader = make_data_loader(config, "train_dataset")
+    val_loader = make_data_loader(config,"val_dataset")
+    return train_loader, val_loader
+
+def make_data_loader(config, dataset_type):
+    spec = config.get(dataset_type)
+    dataset = datasets.make(spec['dataset'])
+    dataset = datasets.make(spec['wrapper'], args={'dataset': dataset})
+
+    device = config['model']['args']['device']
+    
+    sampler = None
+    if device == 'cuda':
+        sampler = torch.utils.data.distributed.DistributedSampler(dataset)
+    loader = DataLoader(dataset, batch_size=spec['batch_size'],
+        shuffle=False, num_workers=8, pin_memory=True, sampler=sampler)
+    return loader
+
+def prepare_training(config):
+    if config.get('resume') is not None:
+        model = models.make(config['model'])
+        model.to(model.device)
+        
+        optimizer = make_optimizer(
+            model.parameters(), config['optimizer'])
+        epoch_start = config.get('resume') + 1
+        model.optimizer = optimizer
+    else:
+        model = models.make(config['model'])
+        model.to(model.device)
+        optimizer = make_optimizer(
+            model.parameters(), config['optimizer'])
+        epoch_start = 1
+        model.optimizer = optimizer
+    max_epoch = config.get('epoch_max')
+   
+    lr_scheduler = CosineAnnealingLR(optimizer, max_epoch, eta_min=config.get('lr_min'))
+    
+    return model, optimizer, epoch_start, lr_scheduler

@@ -14,25 +14,9 @@ from torchvision import transforms
 from mmcv.runner import load_checkpoint
 import metric
 from PIL import Image
+import matplotlib.pyplot as plt
 
-def batched_predict(model, inp, coord, bsize):
-    with torch.no_grad():
-        model.gen_feat(inp)
-        n = coord.shape[1]
-        ql = 0
-        preds = []
-        while ql < n:
-            qr = min(ql + bsize, n)
-            pred = model.query_rgb(coord[:, ql: qr, :])
-            preds.append(pred)
-            ql = qr
-        pred = torch.cat(preds, dim=1)
-    return pred, preds
-
-
-def tensor2PIL(tensor):
-    toPIL = transforms.ToPILImage()
-    return toPIL(tensor)
+# TODO OOP this and use writer wrapper
 
 def write_metrics(values, means, i):
     jaccard, dice, accuracy, precision, recall, specificity = values
@@ -43,13 +27,18 @@ def write_metrics(values, means, i):
     writer.add_scalar('recall', recall, global_step=i)
     writer.add_scalar('specificity', specificity, global_step=i)
 
-def create_overlay_plot(inp, mask):
-    inp = tensor2PIL(inp.squeeze(0))
-    mask = tensor2PIL(mask.squeeze(0))
-
-    mask = mask.convert('RGB')
-    out = Image.blend(inp, mask, 0.5)
-    return transforms.ToTensor()(out)
+def create_gt_vs_pred_figure(gt, pred, threshold=0.5):
+    gt = 1 - gt
+    pred = 1 - pred
+    pred = pred > threshold
+    gt = transforms.ToPILImage()(gt.squeeze(0).float())
+    pred = transforms.ToPILImage()(pred.squeeze(0).float())
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.imshow(gt)
+    ax1.set_title('Ground Truth')
+    ax2.imshow(pred)
+    ax2.set_title('Prediction')
+    return fig
 
 
 def test(loader, model):
@@ -71,15 +60,14 @@ def test(loader, model):
         pred = torch.sigmoid(model.infer(inp))
 
         metrics.update(pred, gt)
-        metric_values = metrics.compute_values(pred, gt)
+        metric_values = metrics.compute_values()
+
         write_metrics(metric_values, None, i)
         writer.add_pr_curve('PR Curve', gt, pred, global_step=i)
         if i % 5 == 0:
-            inversed = inverse_transform(inp)
-            plot_pred = create_overlay_plot(inversed, pred)
-            plot_gt = create_overlay_plot(inversed, gt)
-            writer.add_image('Prediction Overlay', plot_pred, global_step=i)
-            writer.add_image('Ground Truth Overlay', plot_gt, global_step=i)
+            fig = create_gt_vs_pred_figure(gt, pred)
+            writer.add_figure('Ground Truth vs Prediction', fig, global_step=i)
+
      
      
 
