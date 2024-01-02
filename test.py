@@ -8,96 +8,99 @@ from tqdm import tqdm
 
 import datasets
 import models
-import utils
-
+import writer  
 from torchvision import transforms
 from mmcv.runner import load_checkpoint
 import metric
 from PIL import Image
 import matplotlib.pyplot as plt
+from datasets.resample_transform import Resampler
 
-# TODO OOP this and use writer wrapper
-
-def write_metrics(values, means, i):
-    jaccard, dice, accuracy, precision, recall, specificity = values
-    writer.add_scalar('jaccard', jaccard, global_step=i)
-    writer.add_scalar('dice', dice, global_step=i)
-    writer.add_scalar('accuracy', accuracy, global_step=i)
-    writer.add_scalar('precision', precision, global_step=i)
-    writer.add_scalar('recall', recall, global_step=i)
-    writer.add_scalar('specificity', specificity, global_step=i)
-
-def create_gt_vs_pred_figure(gt, pred, threshold=0.5):
-    gt = 1 - gt
-    pred = 1 - pred
-    pred = pred > threshold
-    gt = transforms.ToPILImage()(gt.squeeze(0).float())
-    pred = transforms.ToPILImage()(pred.squeeze(0).float())
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    ax1.imshow(gt)
-    ax1.set_title('Ground Truth')
-    ax2.imshow(pred)
-    ax2.set_title('Prediction')
-    return fig
-
-
-def test(loader, model):
+class Test:
     
-    device = model.device
-    model.eval()
+        def __init__(self, model, test_loader, save_path, resampler, original_image_dataset):
+            self.model = model
+            self.test_loader = test_loader
+            self.save_path = save_path
+            self.resampler = resampler
+            self.original_image_dataset = original_image_dataset
     
-    pbar = tqdm(loader, leave=False, desc='val')
+            self.metrics = metric.Metric()
+            self.writer = writer.Writer(os.path.join(self.save_path, 'test'))
     
-    for i, batch in enumerate(pbar):
-        for k, v in batch.items():
-            batch[k] = v.to(device)
+        def start(self):
+    
+            self.model.eval()
+    
+            pbar = tqdm(total=len(self.test_loader), leave=False, desc='test')
+   
+            for i, batch in enumerate(self.test_loader):
+                for k, v in batch.items():
+                    batch[k] = v.to(self.model.device)
+    
+                self.metrics.reset_metrics()
 
-        metrics.reset()
+                inp = batch['inp']
+                gt = batch['gt']
+                gt = (gt>0).int()
+    
+                pred = torch.sigmoid(self.model.infer(inp))
+    
+                values = self.metrics.update_and_compute(pred, gt)
+                
+                self.writer.write_metrics_and_means(values, i)
+                self.writer.write_pr_curve(pred,gt, i)
+                self.writer.write_gt_vs_pred_figure(pred, gt, i, "Gt vs Pred")
 
-        inp = batch['inp']
-        gt = batch['gt']
-        gt = (gt>0).int()
-        pred = torch.sigmoid(model.infer(inp))
+                original_image  = self.original_image_dataset[i]["inp"]
+                original_image = self.original_image_dataset.inverse_transform(original_image)
 
-        metrics.update(pred, gt)
-        metric_values = metrics.compute_values()
+                resampled = self.original_image_dataset.inverse_transform(inp)
 
-        write_metrics(metric_values, None, i)
-        writer.add_pr_curve('PR Curve', gt, pred, global_step=i)
-        if i % 5 == 0:
-            fig = create_gt_vs_pred_figure(gt, pred)
-            writer.add_figure('Ground Truth vs Prediction', fig, global_step=i)
+                self.writer.write_resampled_vs_orig_figure(resampled, original_image, i, "Resampled vs Orig")
+                self.writer.write_overlay_mask_figure(resampled, pred, i, "Overlay Mask")
 
-     
-     
+                if pbar is not None:
+                    pbar.update(1)
+    
+            if pbar is not None:
+                pbar.close()
 
 if __name__ == '__main__':
-    global log, writer, metrics
-    metrics = metric.Metric()
+  
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config')
+    parser.add_argument('--config', default='configs/sam-vit-b.yaml')
     parser.add_argument('--model')
     parser.add_argument('--prompt', default='none')
+    parser.add_argument('--save-path', default="./save/")
     args = parser.parse_args()
 
-    log, writer = utils.set_save_path(os.path.join("save","test"), remove=False)
+    os.makedirs(args.save_path, exist_ok=True)
 
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
+    
     spec = config['test_dataset']
     dataset = datasets.make(spec['dataset'])
     dataset = datasets.make(spec['wrapper'], args={'dataset': dataset})
     loader = DataLoader(dataset, batch_size=spec['batch_size'],
                         num_workers=8)
     
-    global inverse_transform
-    inverse_transform = dataset.inverse_transform
-
     model = models.make(config['model'])
     device = model.device
-    
     model = model.to(device)
+
     sam_checkpoint = torch.load(args.model, map_location=device)
     model.load_state_dict(sam_checkpoint, strict=True)
     
-    test(loader, model)
+    resampling_spec = config["test_dataset"]["wrapper"]["args"]
+    resampler = Resampler(resampling_spec["inp_size"], resampling_spec["interpolation_mode"], resampling_spec["resampling_factor"])
+
+    spec = config['test_dataset']
+    config["test_dataset"]["wrapper"]["args"]["resampling_factor"] = 1
+    original_image_dataset = datasets.make(spec['dataset'])
+    original_image_dataset = datasets.make(spec['wrapper'], args={'dataset': original_image_dataset})
+    original_image_dataset
+    test = Test(model, loader, args.save_path, resampler, original_image_dataset)
+    test.start()
+
