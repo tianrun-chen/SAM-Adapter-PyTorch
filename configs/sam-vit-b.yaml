@@ -12,7 +12,8 @@ train_dataset:
       inp_size: 1024
       augment: false
       interpolation_mode: "nearest"
-      resampling_factor: 8
+      resampling_factor: 1
+      resampling_inp_size: 1024
   batch_size: 1
 
 val_dataset:
@@ -28,7 +29,8 @@ val_dataset:
     args:
       inp_size: 1024
       interpolation_mode: "nearest"
-      resampling_factor: 4
+      resampling_factor: 1
+      resampling_inp_size: 1024
   batch_size: 1
 
 test_dataset:
@@ -44,7 +46,8 @@ test_dataset:
     args:
       inp_size: 1024
       interpolation_mode: "nearest"
-      resampling_factor: 1
+      resampling_factor: 1.5
+      resampling_inp_size: 256
   batch_size: 1
 
 eval_type: f1

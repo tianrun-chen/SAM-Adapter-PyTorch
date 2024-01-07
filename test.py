@@ -42,7 +42,7 @@ class Test:
 
                 inp = batch['inp']
                 gt = batch['gt']
-                gt = (gt>0).int()
+                gt = (gt>0)
     
                 pred = torch.sigmoid(self.model.infer(inp))
     
@@ -58,7 +58,7 @@ class Test:
                 resampled = self.original_image_dataset.inverse_transform(inp)
 
                 self.writer.write_resampled_vs_orig_figure(resampled, original_image, i, "Resampled vs Orig")
-                self.writer.write_overlay_mask_figure(resampled, pred, i, "Overlay Mask")
+                self.writer.write_overlay_mask_figure(resampled, pred, gt, i, "Overlay Mask")
 
                 if pbar is not None:
                     pbar.update(1)
@@ -79,6 +79,9 @@ if __name__ == '__main__':
 
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
+        # Save config
+        with open(os.path.join(args.save_path, 'config.yaml'), 'w') as f:
+            yaml.dump(config, f)
     
     spec = config['test_dataset']
     dataset = datasets.make(spec['dataset'])
@@ -96,11 +99,12 @@ if __name__ == '__main__':
     resampling_spec = config["test_dataset"]["wrapper"]["args"]
     resampler = Resampler(resampling_spec["inp_size"], resampling_spec["interpolation_mode"], resampling_spec["resampling_factor"])
 
+    # Load original image dataset (without any resampling)
     spec = config['test_dataset']
     config["test_dataset"]["wrapper"]["args"]["resampling_factor"] = 1
     original_image_dataset = datasets.make(spec['dataset'])
     original_image_dataset = datasets.make(spec['wrapper'], args={'dataset': original_image_dataset})
-    original_image_dataset
+
     test = Test(model, loader, args.save_path, resampler, original_image_dataset)
     test.start()
 

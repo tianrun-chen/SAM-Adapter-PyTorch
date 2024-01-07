@@ -14,7 +14,7 @@ class Resampler(torch.nn.Module):
         self.interpolation_mode = InterpolationMode(interpolation_mode)
     
     def forward(self, img):
-        new_size = self.inp_size // self.resampling_factor
+        new_size = int(self.inp_size // self.resampling_factor)
 
         downsampler = transforms.Resize(size=(new_size,new_size), interpolation=self.interpolation_mode)
         upsampler = transforms.Resize(size=(self.inp_size, self.inp_size), interpolation=self.interpolation_mode)

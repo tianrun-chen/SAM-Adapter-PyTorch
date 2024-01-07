@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 def make_dirs(path):
     for split_type in ["train", "eval", "test"]:
-        os.makedirs(os.path.join(path, split_type), exist_ok=False)
+        os.makedirs(os.path.join(path, split_type), exist_ok=True)
 
 def save_split(split, path_img, path_mask):
     for i, (img, mask) in enumerate(split):
@@ -29,6 +29,10 @@ def main(image_folder, mask_folder, seed, output):
     generator1 = torch.Generator().manual_seed(seed)
     dataset_size = len(paired_folders)
     train_cnt, eval_cnt, test_cnt =  (int(dataset_size * 0.8), int(dataset_size * 0.1), int(dataset_size * 0.1))
+    
+    if train_cnt + eval_cnt + test_cnt < dataset_size:
+        train_cnt += dataset_size - (train_cnt + eval_cnt + test_cnt)
+    
     train, eval, test = data.random_split(paired_folders, [train_cnt, eval_cnt, test_cnt], generator=generator1)
     
     save(train,eval,test, output)

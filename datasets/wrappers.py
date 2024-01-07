@@ -23,15 +23,15 @@ def resize_fn(img, size):
 
 @register('val')
 class ValDataset(Dataset):
-    def __init__(self, dataset, inp_size=None, augment=False, interpolation_mode="nearest", resampling_factor = 1):
+    def __init__(self, dataset, inp_size=None, augment=False, interpolation_mode="nearest", resampling_factor = 1, resampling_inp_size = None):
         self.dataset = dataset
         self.inp_size = inp_size
         self.augment = augment
 
 
         self.img_transform = transforms.Compose([
+                Resampler(inp_size = resampling_inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
                 transforms.Resize((self.inp_size, self.inp_size)),
-                Resampler(inp_size = inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
@@ -44,8 +44,8 @@ class ValDataset(Dataset):
                                      std=[1, 1, 1])
             ])
         self.mask_transform = transforms.Compose([
+                Resampler(inp_size = resampling_inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
                 transforms.Resize((inp_size, inp_size), interpolation=Image.NEAREST),
-                Resampler(inp_size = inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
                 transforms.ToTensor(),
             ])
 
@@ -64,19 +64,18 @@ class ValDataset(Dataset):
 @register('train')
 class TrainDataset(Dataset):
     def __init__(self, dataset, size_min=None, size_max=None, inp_size=None,
-                 augment=False, interpolation_mode="nearest", resampling_factor = 1, gt_resize=None):
+                 augment=False, interpolation_mode="nearest", resampling_factor = 1, resampling_inp_size = None):
         self.dataset = dataset
         self.size_min = size_min
         if size_max is None:
             size_max = size_min
         self.size_max = size_max
         self.augment = augment
-        self.gt_resize = gt_resize
 
         self.inp_size = inp_size
         self.img_transform = transforms.Compose([
+                Resampler(inp_size = resampling_inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
                 transforms.Resize((self.inp_size, self.inp_size)),
-                Resampler(inp_size = inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
@@ -88,8 +87,8 @@ class TrainDataset(Dataset):
                                      std=[1, 1, 1])
             ])
         self.mask_transform = transforms.Compose([
+                Resampler(inp_size = resampling_inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
                 transforms.Resize((self.inp_size, self.inp_size)),
-                Resampler(inp_size = inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
                 transforms.ToTensor(),
             ])
 
