@@ -70,15 +70,10 @@ class Writer:
         return fig
 
     def write_metrics_and_means(self, values, step):
-
-        (jaccard, mean_jaccard), (dice, mean_dice), (accuracy, mean_accuracy), (precision, mean_precision), (recall, mean_recall), (specificity, mean_specificity) = values
-        
-        self.writer.add_scalars('Jaccard_Index__IoU_', {"Current": jaccard, "Mean": mean_jaccard}, global_step=step)
-        self.writer.add_scalars('Dice', {"Current": dice, "Mean": mean_dice}, global_step=step)
-        self.writer.add_scalars('Accuracy', {"Current": accuracy, "Mean": mean_accuracy}, global_step=step)
-        self.writer.add_scalars('Precision', {"Current": precision, "Mean": mean_precision}, global_step=step)
-        self.writer.add_scalars('Recall', {"Current": recall, "Mean": mean_recall}, global_step=step)
-        self.writer.add_scalars('Specificity', {"Current": specificity, "Mean": mean_specificity}, global_step=step)
+        current_dice, mean_dice = values["DiceCoefficient"]
+        current_jaccard, mean_jaccard = values["JaccardIndex"]
+        self.writer.add_scalars('Dice', {'current': current_dice, 'mean': mean_dice}, global_step=step)
+        self.writer.add_scalars('JaccardIndex', {'current': current_jaccard, 'mean': mean_jaccard}, global_step=step)
 
 
     def write_pr_curve(self, pred, gt, step):
@@ -101,3 +96,6 @@ class Writer:
 
     def add_scalar(self, name, value, step):
         self.writer.add_scalar(name, value, global_step=step)
+
+    def flush(self):
+        self.writer.flush()

@@ -25,7 +25,7 @@ class Test:
             self.resampler = resampler
             self.original_image_dataset = original_image_dataset
     
-            self.metrics = metric.Metric()
+            self.metrics = metric.Metrics(['JaccardIndex', 'DiceCoefficient'])
             self.writer = writer.Writer(os.path.join(self.save_path, 'test'))
     
         def start(self):
@@ -38,16 +38,17 @@ class Test:
                 for k, v in batch.items():
                     batch[k] = v.to(self.model.device)
     
-                self.metrics.reset_metrics()
-
+            
                 inp = batch['inp']
                 gt = batch['gt']
                 gt = (gt>0)
     
                 pred = torch.sigmoid(self.model.infer(inp))
     
-                values = self.metrics.update_and_compute(pred, gt)
-                
+                self.metrics.reset_current()
+                self.metrics.update(pred, gt)
+                values = self.metrics.compute()
+
                 self.writer.write_metrics_and_means(values, i)
                 self.writer.write_pr_curve(pred,gt, i)
                 self.writer.write_gt_vs_pred_figure(pred, gt, i, "Gt vs Pred")

@@ -34,7 +34,7 @@ class Train:
         self.save_path = save_path
 
         self.writer = writer.Writer(os.path.join(self.save_path, 'train'))
-        self.metrics = metric.Metric()
+        self.validation_metric = metric.Metrics(['JaccardIndex', 'DiceCoefficient'])
 
 
     def eval(self, epoch=None):
@@ -45,6 +45,10 @@ class Train:
             pbar = tqdm(total=len(self.val_loader), leave=False, desc='val')
         else:
             pbar = None
+
+        # Reset metrics (mean and current) for this epoch
+        self.validation_metric.reset()
+        metric_values = None
 
         for i, batch in enumerate(self.val_loader):
             for k, v in batch.items():
@@ -68,8 +72,11 @@ class Train:
                 batch_gt = batch['gt']
             
             batch_gt = (batch_gt>0).int()
-            metric_values = self.metrics.update_and_compute(batch_pred, batch_gt)
-        
+
+            self.validation_metric.reset_current()
+            self.validation_metric.update(batch_pred, batch_gt)
+            metric_values = self.validation_metric.compute()
+
             self.writer.write_metrics_and_means(metric_values, epoch + i)
             self.writer.write_pr_curve(batch_pred, batch_gt, epoch + i)
 
@@ -79,8 +86,8 @@ class Train:
         if pbar is not None:
             pbar.close()
 
-        # return the mean IoU of the current epoch
-        return self.metrics.mean_jaccard.mean_value
+        mean_IoU = metric_values["JaccardIndex"][1]
+        return mean_IoU.item()
 
     def train(self):
 
@@ -107,6 +114,7 @@ class Train:
                 dist.all_gather(batch_loss, self.model.loss_G)
             else:
                 batch_loss = [torch.zeros_like(self.model.loss_G)]
+                batch_loss[0] = self.model.loss_G
             
             loss_list.extend(batch_loss)
             if pbar is not None:
@@ -132,11 +140,10 @@ class Train:
             if self.local_rank == 0:
                 logging.info('Epoch: ' + str(epoch)+ '/' + str(self.epoch_max) + ' train_loss_G: ' + str(train_loss_G))
                 self.writer.add_scalar('lr', self.optimizer.param_groups[0]['lr'], epoch)
-                self.writer.add_scalar('Training loss', train_loss_G, epoch)
+                self.writer.add_scalar('Training_loss', train_loss_G, epoch)
 
                 self.save('last')
 
-            # TODO Validation During Training
             if (self.epoch_val is not None) and (epoch % self.epoch_val == 0):
             
                     
@@ -146,7 +153,6 @@ class Train:
                         best_mean_IoU = current_mean_IoU
                         if self.local_rank == 0:
                             logging.info('Epoch: ' + str(epoch)+ '/' + str(self.epoch_max) + ' val_mean_IoU: ' + str(current_mean_IoU))
-                            self.writer.add_scalars('Validation IoU', {'val': current_mean_IoU}, epoch)
                             self.save('best')
 
             self.writer.flush()
