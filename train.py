@@ -36,6 +36,7 @@ class Train:
         self.writer = writer.Writer(os.path.join(self.save_path, 'train'))
         self.metrics = metric.Metric()
 
+
     def eval(self, epoch=None):
 
         self.model.eval()
@@ -45,7 +46,6 @@ class Train:
         else:
             pbar = None
 
-        
         for i, batch in enumerate(self.val_loader):
             for k, v in batch.items():
                 batch[k] = v.to(self.model.device)
@@ -68,17 +68,19 @@ class Train:
                 batch_gt = batch['gt']
             
             batch_gt = (batch_gt>0).int()
-            self.metrics.update(batch_pred, batch_gt)
-            metric_values = self.metrics.compute_values()
-            
-            self.writer.write_metrics(metric_values, None, global_step=epoch + i)
-            self.writer.write_pr_curve(batch_pred, batch_gt, global_step=epoch + i)
+            metric_values = self.metrics.update_and_compute(batch_pred, batch_gt)
+        
+            self.writer.write_metrics_and_means(metric_values, epoch + i)
+            self.writer.write_pr_curve(batch_pred, batch_gt, epoch + i)
 
             if pbar is not None:
                 pbar.update(1)
 
         if pbar is not None:
             pbar.close()
+
+        # return the mean IoU of the current epoch
+        return self.metrics.mean_jaccard.mean_value
 
     def train(self):
 
@@ -117,6 +119,9 @@ class Train:
         return mean(loss)
 
     def start(self):
+
+        best_mean_IoU = -1
+
         for epoch in range(epoch_start, epoch_max + 1):
             
             if self.model.device == 'cuda':
@@ -127,15 +132,23 @@ class Train:
             if self.local_rank == 0:
                 logging.info('Epoch: ' + str(epoch)+ '/' + str(self.epoch_max) + ' train_loss_G: ' + str(train_loss_G))
                 self.writer.add_scalar('lr', self.optimizer.param_groups[0]['lr'], epoch)
-                self.writer.add_scalars('loss', {'train G': train_loss_G}, epoch)
+                self.writer.add_scalar('Training loss', train_loss_G, epoch)
 
                 self.save('last')
 
+            # TODO Validation During Training
             if (self.epoch_val is not None) and (epoch % self.epoch_val == 0):
             
-                    # TODO save best model according to the metric
-                    self.eval(epoch)
-            
+                    
+                    current_mean_IoU = self.eval(epoch)
+
+                    if current_mean_IoU > best_mean_IoU:
+                        best_mean_IoU = current_mean_IoU
+                        if self.local_rank == 0:
+                            logging.info('Epoch: ' + str(epoch)+ '/' + str(self.epoch_max) + ' val_mean_IoU: ' + str(current_mean_IoU))
+                            self.writer.add_scalars('Validation IoU', {'val': current_mean_IoU}, epoch)
+                            self.save('best')
+
             self.writer.flush()
     
     def save(self, name):

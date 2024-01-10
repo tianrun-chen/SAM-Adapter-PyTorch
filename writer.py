@@ -73,7 +73,7 @@ class Writer:
 
         (jaccard, mean_jaccard), (dice, mean_dice), (accuracy, mean_accuracy), (precision, mean_precision), (recall, mean_recall), (specificity, mean_specificity) = values
         
-        self.writer.add_scalars('Jaccard Index (IoU)', {"Current": jaccard, "Mean": mean_jaccard}, global_step=step)
+        self.writer.add_scalars('Jaccard_Index__IoU_', {"Current": jaccard, "Mean": mean_jaccard}, global_step=step)
         self.writer.add_scalars('Dice', {"Current": dice, "Mean": mean_dice}, global_step=step)
         self.writer.add_scalars('Accuracy', {"Current": accuracy, "Mean": mean_accuracy}, global_step=step)
         self.writer.add_scalars('Precision', {"Current": precision, "Mean": mean_precision}, global_step=step)
@@ -98,3 +98,6 @@ class Writer:
     def write_overlay_mask_figure(self, image, pred, gt, step, desc):
         fig = self.create_overlay_mask_figure(image, pred, gt)
         self.write_figure(fig, step, desc)
+
+    def add_scalar(self, name, value, step):
+        self.writer.add_scalar(name, value, global_step=step)
