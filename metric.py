@@ -5,9 +5,9 @@ from torchmetrics.aggregation import MeanMetric
 
 # Wrapper Class around BinaryJaccardIndex with it mean value
 class JaccardIndex:
-    def __init__(self):
-        self.jaccard = BinaryJaccardIndex()
-        self.mean_jaccard = MeanMetric()
+    def __init__(self, device='cuda'):
+        self.jaccard = BinaryJaccardIndex().to(device)
+        self.mean_jaccard = MeanMetric().to(device)
 
     def reset(self):
         self.jaccard.reset()
@@ -25,9 +25,9 @@ class JaccardIndex:
     
  # Wrapper Class around Dice with its mean value
 class DiceCoefficient:
-    def __init__(self):
-        self.dice = Dice()
-        self.mean_dice = MeanMetric()
+    def __init__(self, device='cuda'):
+        self.dice = Dice().to(device)
+        self.mean_dice = MeanMetric().to(device)
         self.mean_overall = -1
 
     def reset(self):
