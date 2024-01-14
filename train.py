@@ -34,7 +34,7 @@ class Train:
         self.save_path = save_path
 
         self.writer = writer.Writer(os.path.join(self.save_path, 'train'))
-        self.validation_metric = metric.Metrics(['JaccardIndex', 'DiceCoefficient'])
+        self.validation_metric = metric.Metrics(['JaccardIndex', 'DiceCoefficient', 'Precision', 'Recall'], device=model.device)
 
 
     def eval(self, epoch=None):
@@ -77,16 +77,16 @@ class Train:
             self.validation_metric.update(batch_pred, batch_gt)
             metric_values = self.validation_metric.compute()
 
-            self.writer.write_metrics_and_means(metric_values, epoch + i)
-            self.writer.write_pr_curve(batch_pred, batch_gt, epoch + i)
-
             if pbar is not None:
                 pbar.update(1)
 
         if pbar is not None:
             pbar.close()
 
+        self.writer.write_means(metric_values, epoch)
+        
         mean_IoU = metric_values["JaccardIndex"][1]
+        
         return mean_IoU.item()
 
     def train(self):
@@ -174,7 +174,10 @@ if __name__ == '__main__':
 
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-    
+        # Save config
+        with open(os.path.join(args.save_path, 'config.yaml'), 'w') as f:
+            yaml.dump(config, f)
+            
     os.makedirs(config.get('log_dir'), exist_ok=True)
     logging.basicConfig(filename=os.path.join(config.get('log_dir'),"log.txt"), level=logging.INFO, format="%(asctime)s %(message)s")
     
