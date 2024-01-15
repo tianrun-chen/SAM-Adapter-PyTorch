@@ -1,0 +1,6 @@
+# Python version 3.11
+torch
+geopandas
+rasterio
+tqdm
+Pillow

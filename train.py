@@ -171,11 +171,12 @@ if __name__ == '__main__':
     parser.add_argument("--local_rank", type=int, default=-1, help="")
     args = parser.parse_args()
 
-
+    save_path = None
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         # Save config
-        with open(os.path.join(args.save_path, 'config.yaml'), 'w') as f:
+        save_path = config['write_dir']
+        with open(os.path.join(save_path, 'config.yaml'), 'w') as f:
             yaml.dump(config, f)
             
     os.makedirs(config.get('log_dir'), exist_ok=True)
@@ -227,5 +228,5 @@ if __name__ == '__main__':
 
     train_loader, val_loader = utils.make_data_loaders(config=config)
     
-    train = Train(model, optimizer, lr_scheduler, train_loader, val_loader, epoch_start, epoch_max, epoch_val, config.get('write_dir'), local_rank=local_rank)
+    train = Train(model, optimizer, lr_scheduler, train_loader, val_loader, epoch_start, epoch_max, epoch_val, save_path, local_rank=local_rank)
     train.start()

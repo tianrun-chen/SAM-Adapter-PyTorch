@@ -1,52 +1,42 @@
-from datasets.image_folder import PairedImageFolders
 import torch.utils.data as data
 import torch
 import os
 import argparse
-from tqdm import tqdm
+import shutil
 
 def make_dirs(path):
     for split_type in ["train", "eval", "test"]:
         os.makedirs(os.path.join(path, split_type), exist_ok=True)
 
-def save_split(split, path_img, path_mask):
-    for i, (img, mask) in enumerate(split):
-        img.save(os.path.join(path_img, f"{i}.png"))
-        mask.save(os.path.join(path_mask, f"{i}.png"))
 
-def save(train,eval,test, output):
-    for split in  tqdm([("train", train), ("eval",eval), ("test",test)], desc="Saving training, evaluation and testing splits"):
-        save_split(split[1], os.path.join(output,"img", split[0]), os.path.join(output,"masks", split[0]))
+def main(tif_folder, seed, output):
+    make_dirs(output)
+    tif_files = [f for f in os.listdir(tif_folder) if f.endswith('.tif')]
+    tif_files.sort()
+    num_files = len(tif_files)
+    train_split = int(0.8 * num_files)
+    eval_split = int(0.1 * num_files)
+    test_split = num_files - train_split - eval_split        
+    generator = torch.Generator().manual_seed(seed)
 
-def main(image_folder, mask_folder, seed, output):
+    train, eval, test = data.random_split(tif_files, [train_split, eval_split, test_split], generator=generator)
     
-    make_dirs(os.path.join(output,"img"))
-    make_dirs(os.path.join(output,"masks"))
+    # save splits
+    for split_type, split in zip(["train", "eval", "test"], [train, eval, test]):
+        for file in split:
+            file_path = os.path.join(tif_folder, file)
+            shutil.copy(file_path, os.path.join(output, split_type))
     
-    paired_folders = PairedImageFolders(image_folder, mask_folder)
-   
-    # Same generator for both image and label folders
-    generator1 = torch.Generator().manual_seed(seed)
-    dataset_size = len(paired_folders)
-    train_cnt, eval_cnt, test_cnt =  (int(dataset_size * 0.8), int(dataset_size * 0.1), int(dataset_size * 0.1))
-    
-    if train_cnt + eval_cnt + test_cnt < dataset_size:
-        train_cnt += dataset_size - (train_cnt + eval_cnt + test_cnt)
-    
-    train, eval, test = data.random_split(paired_folders, [train_cnt, eval_cnt, test_cnt], generator=generator1)
-    
-    save(train,eval,test, output)
-    
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--images-folder', default="../temp/images_preprocessed_split")
-    parser.add_argument("--mask-folder", default="../temp/masks_preprocessed_split")
+    parser.add_argument('--tif-folder', default="./split_folder_empty_removed")
     parser.add_argument("--seed", type=int, default=42, help="Seed for random train-eval-test set generator")
-    parser.add_argument("--output", default="../load", help="Output folder path (load) for img and mask folders")
+    parser.add_argument("--output", default="./random_train_eval_test_split", help="Train, eval and test split output folder")
     args = parser.parse_args()
-    image_folder = args.images_folder
-    mask_folder = args.mask_folder
+    tif_folder = args.tif_folder
     seed = args.seed
     output = args.output
 
-    main(image_folder, mask_folder, seed, output)
+    main(tif_folder, seed, output)

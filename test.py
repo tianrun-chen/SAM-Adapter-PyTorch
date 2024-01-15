@@ -73,18 +73,25 @@ if __name__ == '__main__':
     parser.add_argument('--config', default='configs/sam-vit-b.yaml')
     parser.add_argument('--model')
     parser.add_argument('--prompt', default='none')
-    parser.add_argument('--save-path', default="./save/")
     parser.add_argument('--dataset', default='val_dataset')
     args = parser.parse_args()
 
-    os.makedirs(args.save_path, exist_ok=True)
 
+
+    
+    save_path = None
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
+        save_path = config['write_dir']
+        os.makedirs(save_path, exist_ok=True)
         # Save config
-        with open(os.path.join(args.save_path, 'config.yaml'), 'w') as f:
+        with open(os.path.join(save_path, 'config.yaml'), 'w') as f:
             yaml.dump(config, f)
     
+    
+    
+    os.makedirs(save_path, exist_ok=True)
+
     dataset_to_use = args.dataset
 
     spec = config[dataset_to_use]
@@ -109,6 +116,6 @@ if __name__ == '__main__':
     original_image_dataset = datasets.make(spec['dataset'])
     original_image_dataset = datasets.make(spec['wrapper'], args={'dataset': original_image_dataset})
 
-    test = Test(model, loader, args.save_path, resampler, original_image_dataset)
+    test = Test(model, loader, save_path, resampler, original_image_dataset)
     test.start()
 

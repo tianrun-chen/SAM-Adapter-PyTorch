@@ -198,7 +198,7 @@ class Writer:
         self.writer.add_scalars('Dice', {'mean': mean_dice}, global_step=step)
         self.writer.add_scalars('IoU', {'mean': mean_jaccard}, global_step=step)
         self.writer.add_scalars('Precision', {'mean': mean_precision}, global_step=step)
-        self.writee.add_scalars('Recall', {'mean': mean_recall}, global_step=step)
+        self.writer.add_scalars('Recall', {'mean': mean_recall}, global_step=step)
         self.writer.add_scalars('Accuracy', {'mean': mean_accuracy}, global_step=step)
         self.writer.add_scalars('F1', {'mean': mean_f1}, global_step=step)
         self.writer.add_scalars('AUCROC', {'mean': mean_AUCROC}, global_step=step)
