@@ -25,7 +25,7 @@ class Test:
             self.resampler = resampler
             self.original_image_dataset = original_image_dataset
     
-            self.metrics = metric.Metrics(['JaccardIndex', 'DiceCoefficient', 'Precision', 'Recall'], device=model.device)
+            self.metrics = metric.Metrics(['JaccardIndex', 'DiceCoefficient', 'Precision', 'Recall', 'Accuracy', 'F1Score', 'AUCROC'], device=model.device)
             self.writer = writer.Writer(os.path.join(self.save_path, 'test'))
     
         def start(self):

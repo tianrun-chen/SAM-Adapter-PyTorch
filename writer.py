@@ -54,17 +54,14 @@ class Writer:
 
         image = transforms.ToPILImage()(image_tensor)
         image = image.convert("RGBA")
-        image.save("image.png")
 
         canvas_image = transforms.ToPILImage()(canvas.float())
 
         canvas_image = canvas_image.convert("RGBA")
         
         blended = Image.blend(image, canvas_image, alpha = 0.4)
-        blended.save("blended.png")
-        blended_tensor = transforms.ToTensor()(blended)
 
- 
+        blended_tensor = transforms.ToTensor()(blended)
 
         # Ignore true negatives (Not interesting)
         gt = gt.squeeze(0)
@@ -79,7 +76,7 @@ class Writer:
         blended_tensor[2][tn == 1] = image_tensor[2][tn == 1]
 
         blended = transforms.ToPILImage()(blended_tensor)
-        blended.save("blended2.png")
+
         # create figure out of canvas
         fig, ax = plt.subplots(1, 1)
         fig.set_figheight(15)
@@ -89,6 +86,9 @@ class Writer:
         current_dice, _ = metrics["DiceCoefficient"]
         current_precision, _ = metrics["Precision"]
         current_recall, _ = metrics["Recall"]
+        current_accuracy, _ = metrics["Accuracy"]
+        current_f1, _ = metrics["F1Score"]
+        current_AUCROC, _ = metrics["AUCROC"]
 
         # Create Legend for the figure (including the metrics)
 
@@ -101,7 +101,10 @@ class Writer:
                         Line2D([0], [0], color='black', lw=4, label=f'Jaccard Index (IoU): {current_jaccard:.4f}'),
                         Line2D([0], [0], color='black', lw=4, label=f'Dice Coefficient: {current_dice:.4f}'),
                         Line2D([0], [0], color='black', lw=4, label=f'Precision: {current_precision:.4f}'),
-                        Line2D([0], [0], color='black', lw=4, label=f'Recall: {current_recall:.4f}')]
+                        Line2D([0], [0], color='black', lw=4, label=f'Recall: {current_recall:.4f}'),
+                        Line2D([0], [0], color='black', lw=4, label=f'Accuracy: {current_accuracy:.4f}'),
+                        Line2D([0], [0], color='black', lw=4, label=f'F1 Score: {current_f1:.4f}'),
+                        Line2D([0], [0], color='black', lw=4, label=f'AUCROC: {current_AUCROC:.4f}')]
         
         ax.legend(handles=legend_elements, loc='upper right')
         ax.imshow(blended)
@@ -172,20 +175,33 @@ class Writer:
         current_jaccard, mean_jaccard = values["JaccardIndex"]
         current_precision, mean_precision = values["Precision"]
         current_recall, mean_recall = values["Recall"]
+        current_accuracy, mean_accuracy = values["Accuracy"]
+        current_f1, mean_f1 = values["F1Score"]
+        current_AUCROC, mean_AUCROC = values["AUCROC"]
+
         self.writer.add_scalars('Dice', {'current': current_dice, 'mean': mean_dice}, global_step=step)
         self.writer.add_scalars('IoU', {'current': current_jaccard, 'mean': mean_jaccard}, global_step=step)
         self.writer.add_scalars('Precision', {'current': current_precision, 'mean': mean_precision}, global_step=step)
         self.writer.add_scalars('Recall', {'current': current_recall, 'mean': mean_recall}, global_step=step)
+        self.writer.add_scalars('Accuracy', {'current': current_accuracy, 'mean': mean_accuracy}, global_step=step)
+        self.writer.add_scalars('F1', {'current': current_f1, 'mean': mean_f1}, global_step=step)
+        self.writer.add_scalars('AUCROC', {'current': current_AUCROC, 'mean': mean_AUCROC}, global_step=step)
 
     def write_means(self, values, step):
         _, mean_dice = values["DiceCoefficient"]
         _, mean_jaccard = values["JaccardIndex"]
         _, mean_precision = values["Precision"]
         _, mean_recall = values["Recall"]
+        _, mean_accuracy = values["Accuracy"]
+        _, mean_f1 = values["F1"]
+        _, mean_AUCROC = values["AUCROC"]
         self.writer.add_scalars('Dice', {'mean': mean_dice}, global_step=step)
         self.writer.add_scalars('IoU', {'mean': mean_jaccard}, global_step=step)
         self.writer.add_scalars('Precision', {'mean': mean_precision}, global_step=step)
-        self.writer.add_scalars('Recall', {'mean': mean_recall}, global_step=step)
+        self.writee.add_scalars('Recall', {'mean': mean_recall}, global_step=step)
+        self.writer.add_scalars('Accuracy', {'mean': mean_accuracy}, global_step=step)
+        self.writer.add_scalars('F1', {'mean': mean_f1}, global_step=step)
+        self.writer.add_scalars('AUCROC', {'mean': mean_AUCROC}, global_step=step)
         
     def write_pr_curve(self, pred, gt, step):
         self.writer.add_pr_curve('PR Curve', gt, pred, global_step=step)

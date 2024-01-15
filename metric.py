@@ -3,7 +3,9 @@ from torchmetrics.classification import Dice
 from torchmetrics.classification import BinaryPrecision
 from torchmetrics.classification import BinaryRecall 
 from torchmetrics.aggregation import MeanMetric
-
+from torchmetrics.classification import BinaryAccuracy
+from torchmetrics.classification import BinaryF1Score
+from torchmetrics.classification import BinaryAUROC
 # Wrapper Class around BinaryJaccardIndex with it mean value
 class JaccardIndex:
     def __init__(self, device='cuda'):
@@ -86,6 +88,65 @@ class Recall:
     def compute(self):
         return self.recall.compute(), self.mean_recall.compute()
 
+# Wrapper Class around Accuracy and its mean value
+class Accuracy:
+    def __init__(self, device='cuda'):
+        self.accuracy = BinaryAccuracy().to(device)
+        self.mean_accuracy = MeanMetric().to(device)
+    
+    def reset(self):
+        self.accuracy.reset()
+        self.mean_accuracy.reset()
+    
+    def reset_current(self):
+        self.accuracy.reset()
+    
+    def update(self, pred, target):
+        self.accuracy.update(pred, target)
+        self.mean_accuracy.update(self.accuracy.compute())
+    
+    def compute(self):
+        return self.accuracy.compute(), self.mean_accuracy.compute()
+
+# Wrapper Class around F1Score and its mean value
+class F1Score:
+    def __init__(self, device='cuda'):
+        self.f1score = BinaryF1Score().to(device)
+        self.mean_f1score = MeanMetric().to(device)
+    
+    def reset(self):
+        self.f1score.reset()
+        self.mean_f1score.reset()
+    
+    def reset_current(self):
+        self.f1score.reset()
+    
+    def update(self, pred, target):
+        self.f1score.update(pred, target)
+        self.mean_f1score.update(self.f1score.compute())
+    
+    def compute(self):
+        return self.f1score.compute(), self.mean_f1score.compute()
+    
+# Wrapper Class around aucroc and its mean value
+class AUCROC:
+    def __init__(self, device='cuda'):
+        self.aucroc = BinaryAUROC().to(device)
+        self.mean_aucroc = MeanMetric().to(device)
+    
+    def reset(self):
+        self.aucroc.reset()
+        self.mean_aucroc.reset()
+    
+    def reset_current(self):
+        self.aucroc.reset()
+    
+    def update(self, pred, target):
+        self.aucroc.update(pred, target)
+        self.mean_aucroc.update(self.aucroc.compute())
+    
+    def compute(self):
+        return self.aucroc.compute(), self.mean_aucroc.compute()
 # Metrics Class with defined metric wrappers with ability to dynamically add metrics if needed
 class Metrics:
     def __init__(self, metrics, device='cuda'):

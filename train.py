@@ -34,7 +34,7 @@ class Train:
         self.save_path = save_path
 
         self.writer = writer.Writer(os.path.join(self.save_path, 'train'))
-        self.validation_metric = metric.Metrics(['JaccardIndex', 'DiceCoefficient', 'Precision', 'Recall'], device=model.device)
+        self.validation_metric = metric.Metrics(['JaccardIndex', 'DiceCoefficient', 'Precision', 'Recall', 'Accuracy', 'F1Score', 'AUCROC'], device=model.device)
 
 
     def eval(self, epoch=None):
