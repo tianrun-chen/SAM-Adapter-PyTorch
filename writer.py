@@ -193,7 +193,7 @@ class Writer:
         _, mean_precision = values["Precision"]
         _, mean_recall = values["Recall"]
         _, mean_accuracy = values["Accuracy"]
-        _, mean_f1 = values["F1"]
+        _, mean_f1 = values["F1Score"]
         _, mean_AUCROC = values["AUCROC"]
         self.writer.add_scalars('Dice', {'mean': mean_dice}, global_step=step)
         self.writer.add_scalars('IoU', {'mean': mean_jaccard}, global_step=step)

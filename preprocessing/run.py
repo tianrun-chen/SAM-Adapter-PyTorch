@@ -6,7 +6,7 @@ import preprocessing.remove_empty as remove_empty
 import preprocessing.split_dataset as split_dataset
 import preprocessing.crop as crop
 
-def main(tif_folder, geojson_folder, patch_size, tile_size, seed):\
+def main(tif_folder, geojson_folder, patch_size, tile_size, seed):
 
     # Split tif files into non-overlapping tiles
     crop.main(tif_folder, "./temp/split_tiles/", tile_size)
