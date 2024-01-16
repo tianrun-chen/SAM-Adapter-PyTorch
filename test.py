@@ -18,13 +18,14 @@ from datasets.resample_transform import Resampler
 
 class Test:
     
-        def __init__(self, model, test_loader, save_path, resampler, original_image_dataset):
+        def __init__(self, model, test_loader, trained_on_dataset, save_path, original_image_dataset, trained_on_factor, tested_on_factor):
             self.model = model
             self.test_loader = test_loader
             self.save_path = save_path
-            self.resampler = resampler
+            self.trained_on_dataset = trained_on_dataset
             self.original_image_dataset = original_image_dataset
-    
+            self.trained_on_factor = trained_on_factor
+            self.tested_on_factor = tested_on_factor
             self.metrics = metric.Metrics(['JaccardIndex', 'DiceCoefficient', 'Precision', 'Recall', 'Accuracy', 'F1Score', 'AUCROC'], device=model.device)
             self.writer = writer.Writer(os.path.join(self.save_path, 'test'))
     
@@ -56,10 +57,13 @@ class Test:
                 original_image  = self.original_image_dataset[i]["inp"]
                 original_image = self.original_image_dataset.inverse_transform(original_image)
 
-                resampled = self.original_image_dataset.inverse_transform(inp)
+                tested_on_image = self.original_image_dataset.inverse_transform(inp)
 
-                self.writer.write_resampled_vs_orig_figure(resampled, original_image, i, "Resampled vs Orig")
-                self.writer.write_overlay_confusion_matrix_figure(resampled, pred, gt, values, i, "Overlay Confusion Matrix")
+                trained_on_image = self.trained_on_dataset[i]["inp"]
+                trained_on_image = self.trained_on_dataset.inverse_transform(trained_on_image)
+
+                self.writer.write_trained_on_vs_tested_on_vs_original(trained_on_image, tested_on_image, original_image, self.trained_on_factor, self.tested_on_factor, i, "Trained on vs Tested on vs Original")
+                self.writer.write_overlay_confusion_matrix_figure(tested_on_image, pred, gt, values, i, "Overlay Confusion Matrix")
                 
                 if pbar is not None:
                     pbar.update(1)
@@ -71,14 +75,13 @@ if __name__ == '__main__':
   
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='configs/sam-vit-b.yaml')
-    parser.add_argument('--model')
+    parser.add_argument('--model', help="Path to the trained model checkpoint")
     parser.add_argument('--prompt', default='none')
     parser.add_argument('--dataset', default='val_dataset')
     args = parser.parse_args()
 
 
 
-    
     save_path = None
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -94,10 +97,11 @@ if __name__ == '__main__':
 
     dataset_to_use = args.dataset
 
+    # Create Testing Dataset and its loader
     spec = config[dataset_to_use]
-    dataset = datasets.make(spec['dataset'])
-    dataset = datasets.make(spec['wrapper'], args={'dataset': dataset})
-    loader = DataLoader(dataset, batch_size=spec['batch_size'],
+    testing_dataset = datasets.make(spec['dataset'])
+    testing_dataset = datasets.make(spec['wrapper'], args={'dataset': testing_dataset})
+    loader = DataLoader(testing_dataset, batch_size=spec['batch_size'],
                         num_workers=8)
     
     model = models.make(config['model'])
@@ -107,8 +111,13 @@ if __name__ == '__main__':
     sam_checkpoint = torch.load(args.model, map_location=device)
     model.load_state_dict(sam_checkpoint, strict=True)
     
-    resampling_spec = config[dataset_to_use]["wrapper"]["args"]
-    resampler = Resampler(resampling_spec["inp_size"], resampling_spec["interpolation_mode"], resampling_spec["resampling_factor"])
+    # Create Training Dataset
+    trained_on_factor = config["train_dataset"]["wrapper"]["args"]["resampling_factor"]
+    config[dataset_to_use]["wrapper"]["args"]["resampling_factor"] = trained_on_factor
+    trained_on_dataset = datasets.make(spec['dataset'])
+    trained_on_dataset = datasets.make(spec['wrapper'], args={'dataset': trained_on_dataset})
+
+
 
     # Load original image dataset (without any resampling)
     spec = config[dataset_to_use]
@@ -116,6 +125,6 @@ if __name__ == '__main__':
     original_image_dataset = datasets.make(spec['dataset'])
     original_image_dataset = datasets.make(spec['wrapper'], args={'dataset': original_image_dataset})
 
-    test = Test(model, loader, save_path, resampler, original_image_dataset)
+    test = Test(model, loader, trained_on_dataset, save_path,  original_image_dataset, trained_on_factor, trained_on_factor)
     test.start()
 

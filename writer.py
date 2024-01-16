@@ -156,18 +156,22 @@ class Writer:
         
         return canvas
 
-    def create_resampled_vs_orig_figure(self, resampled, original):
-        resampled = transforms.ToPILImage()(resampled.squeeze(0).float())
+    def create_trained_on_vs_tested_on_vs_original(self, trained_on, tested_on, original, trained_on_factor, tested_on_factor):
+        
+        trained_on = transforms.ToPILImage()(trained_on.squeeze(0).float())
+        tested_on = transforms.ToPILImage()(tested_on.squeeze(0).float())
         original = transforms.ToPILImage()(original.squeeze(0).float())
         
-        fig, (ax1, ax2) = plt.subplots(1, 2)
-        fig.set_figheight(15)
-        fig.set_figwidth(15)
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+        fig.set_figheight(25)
+        fig.set_figwidth(25)
         
-        ax1.imshow(resampled)
-        ax1.set_title('Resampled')
-        ax2.imshow(original)
-        ax2.set_title('Original')
+        ax1.imshow(trained_on)
+        ax1.set_title('Trained on factor ' + str(trained_on_factor))
+        ax2.imshow(tested_on)
+        ax2.set_title('Tested on factor ' + str(tested_on_factor))
+        ax3.imshow(original)
+        ax3.set_title('Original')
         return fig
 
     def write_metrics_and_means(self, values, step):
@@ -213,8 +217,8 @@ class Writer:
         fig = self.create_gt_vs_pred_figure(pred, gt)
         self.write_figure(fig, step, desc)
 
-    def write_resampled_vs_orig_figure(self, resampled, orig, step, desc):
-        fig = self.create_resampled_vs_orig_figure(resampled, orig)
+    def write_trained_on_vs_tested_on_vs_original(self, trained_on, tested_on, original, trained_on_factor, tested_on_factor, step, desc):
+        fig = self.create_trained_on_vs_tested_on_vs_original(trained_on, tested_on, original, trained_on_factor, tested_on_factor)
         self.write_figure(fig, step, desc)
 
     def write_overlay_mask_figure(self, image, pred, gt, step, desc):

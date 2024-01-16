@@ -7,13 +7,15 @@ import yaml
 import os
 import datasets
 from torch.utils.data import DataLoader
-from datasets.resample_transform import Resampler
 import models
 import torch
 import argparse
-def test_this_model(trained_model, trained_model_factor, config, dataset, factor_step_size):
+import numpy as np
+from tqdm import tqdm
+
+def test_this_model(trained_model, trained_on_factor, config, dataset_to_use, testing_factor):
     
-    save_path = os.path.join("cross_test", trained_model_factor, dataset, str("on_" + factor_step_size))
+    save_path = os.path.join("cross_test", "trained_on_"+str(trained_on_factor), dataset_to_use, "tested_on_" + str(testing_factor))
     
     with open(config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -21,17 +23,14 @@ def test_this_model(trained_model, trained_model_factor, config, dataset, factor
         # Save config
         with open(os.path.join(save_path, 'config.yaml'), 'w') as f:
             yaml.dump(config, f)
-    
-    
 
-    dataset_to_use = dataset
-    # change the resampling factor for the tested dataset (test_dataset or val_dataset)
-    config[dataset]["wrapper"]["args"]["resampling_factor"] = factor_step_size
+    # Create Testing Dataset and its loader
+    config[dataset_to_use]["wrapper"]["args"]["resampling_factor"] = testing_factor
     spec = config[dataset_to_use]
-    dataset = datasets.make(spec['dataset'])
-    dataset = datasets.make(spec['wrapper'], args={'dataset': dataset})
+    testing_dataset = datasets.make(spec['dataset'])
+    testing_dataset = datasets.make(spec['wrapper'], args={'dataset': testing_dataset})
 
-    loader = DataLoader(dataset, batch_size=spec['batch_size'],
+    loader = DataLoader(testing_dataset, batch_size=spec['batch_size'],
                         num_workers=8)
     
     model = models.make(config['model'])
@@ -41,30 +40,39 @@ def test_this_model(trained_model, trained_model_factor, config, dataset, factor
     sam_checkpoint = torch.load(trained_model, map_location=device)
     model.load_state_dict(sam_checkpoint, strict=True)
     
-    resampling_spec = config[dataset_to_use]["wrapper"]["args"]
-    resampler = Resampler(resampling_spec["inp_size"], resampling_spec["interpolation_mode"], resampling_spec["resampling_factor"])
+    # Create Training Dataset
+    spec = config[dataset_to_use]
+    config[dataset_to_use]["wrapper"]["args"]["resampling_factor"] = trained_on_factor
+    trained_on_dataset = datasets.make(spec['dataset'])
+    trained_on_dataset = datasets.make(spec['wrapper'], args={'dataset': trained_on_dataset})
 
-    # Load original image dataset (without any resampling)
+    
+    # Create Original Image Dataset
     spec = config[dataset_to_use]
     config[dataset_to_use]["wrapper"]["args"]["resampling_factor"] = 1
     original_image_dataset = datasets.make(spec['dataset'])
     original_image_dataset = datasets.make(spec['wrapper'], args={'dataset': original_image_dataset})
 
-    test = Test(model, loader, save_path, resampler, original_image_dataset)
+     
+
+    test = Test(model, loader, trained_on_dataset, save_path,  original_image_dataset, trained_on_factor, testing_factor)
     test.start()
 
-def test_all_models(models, config, factor_step_size=0.2, range_start=1.0, range_end=6.0):
-    for dataset in ["val_dataset", "test_dataset"]:
-        for factor in range(range_start, range_end, factor_step_size):
-            for model in models:
-                test_this_model(model, config, dataset, factor)
+def test_all_models(models_meta_data, config, factor_step_size=0.2, range_start=1.0, range_end=6.0):
+    for meta_data in models_meta_data:
+        model = meta_data.split(";")[0]
+        for dataset in ["val_dataset", "test_dataset"]:
+            for testing_factor in np.arange(range_start, range_end, factor_step_size):
+                trained_on_factor = meta_data.split(";")[1]
+                test_this_model(model, int(trained_on_factor), config, dataset, testing_factor)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="configs/sam-vit-b.yaml")
-    parser.add_argument('--models', default=None, help = "Path to seperate folders containing the models to be tested (Split with comma)")
+    parser.add_argument('--config', default="../configs/sam-vit-b.yaml")
+    parser.add_argument('--models', default=None, help = "Path to seperate folders containing the models to be tested (Split with comma) and the factors they where trained on (Seperated by ;)")
     args = parser.parse_args()
     
-    models = args.models.split(",")
-    test_all_models(models, args.config)
+    models_meta_data = args.models.split(",")
+
+    test_all_models(models_meta_data, args.config)
