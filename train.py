@@ -175,6 +175,7 @@ if __name__ == '__main__':
     with open(args.config, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         # Save config
+        os.makedirs(save_path, exist_ok=True)
         save_path = config['write_dir']
         with open(os.path.join(save_path, 'config.yaml'), 'w') as f:
             yaml.dump(config, f)
