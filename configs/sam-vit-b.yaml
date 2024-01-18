@@ -2,8 +2,8 @@ train_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: ./load/img/train
-      root_path_2: ./load/masks/train
+      root_path_1: ./load/img/trainw
+      root_path_2: ./load/masks/trainw
       cache: none
       split_key: train
   wrapper:
@@ -20,8 +20,8 @@ val_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: ./load/img/eval
-      root_path_2: ./load/masks/eval
+      root_path_1: /home/kandelaki/bt/data_20/preprocessed/256/load/img/eval
+      root_path_2: /home/kandelaki/bt/data_20/preprocessed/256/load/masks/eval
       cache: none
       split_key: test
   wrapper:
@@ -29,16 +29,16 @@ val_dataset:
     args:
       inp_size: 1024
       interpolation_mode: "nearest"
-      resampling_factor: 1
-      resampling_inp_size: 1024
+      resampling_factor: 2
+      resampling_inp_size: 256
   batch_size: 1
 
 test_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: ./load/img/test
-      root_path_2: ./load/masks/test
+      root_path_1: /home/kandelaki/bt/data_20/preprocessed/256/load/img/test
+      root_path_2: /home/kandelaki/bt/data_20/preprocessed/256/load/masks/test
       cache: none
       split_key: test
   wrapper:
@@ -46,8 +46,22 @@ test_dataset:
     args:
       inp_size: 1024
       interpolation_mode: "nearest"
-      resampling_factor: 1.5
-      resampling_inp_size: 256
+      resampling_factor: 2
+      resampling_inp_size: 1024
+  batch_size: 1
+
+forward_dataset:
+  dataset:
+    name: image-folder
+    args:
+      path: /home/kandelaki/git/SAM-Adapter-PyTorch/forward_folder
+  wrapper:
+    name: forward
+    args:
+      inp_size: 1024
+      interpolation_mode: "nearest"
+      resampling_factor: 1
+      resampling_inp_size: 1024
   batch_size: 1
 
 eval_type: f1
@@ -115,8 +129,8 @@ epoch_val: 1
 epoch_save: 1
 
 # For basic logging
-log_dir: ./save/
+log_dir: ./save_resampled_4_on_factor_4/
 # For Tensorboard
-write_dir: ./save/
+write_dir: ./save_resampled_4_on_factor_4/
 #resume: 1
 #start_epoch: 1

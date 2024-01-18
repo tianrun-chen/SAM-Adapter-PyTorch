@@ -110,3 +110,43 @@ class TrainDataset(Dataset):
             'inp': self.img_transform(img),
             'gt': self.mask_transform(mask)
         }
+    
+
+
+@register('forward')
+class ForwardDataset(Dataset):
+    def __init__(self, dataset, inp_size=None, augment=False, interpolation_mode="nearest", resampling_factor = 1, resampling_inp_size = None):
+        self.dataset = dataset
+        self.inp_size = inp_size
+        self.augment = augment
+
+
+        self.img_transform = transforms.Compose([
+                Resampler(inp_size = resampling_inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
+                transforms.Resize((self.inp_size, self.inp_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+            ])
+        
+        self.inverse_transform = transforms.Compose([
+                transforms.Normalize(mean=[0., 0., 0.],
+                                     std=[1/0.229, 1/0.224, 1/0.225]),
+                transforms.Normalize(mean=[-0.485, -0.456, -0.406],
+                                     std=[1, 1, 1])
+            ])
+        self.mask_transform = transforms.Compose([
+                Resampler(inp_size = resampling_inp_size, interpolation_mode=interpolation_mode, resampling_factor=resampling_factor),
+                transforms.Resize((inp_size, inp_size), interpolation=Image.NEAREST),
+                transforms.ToTensor(),
+            ])
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        img = self.dataset[idx]
+
+        return {
+            'inp': self.img_transform(img)
+        }
