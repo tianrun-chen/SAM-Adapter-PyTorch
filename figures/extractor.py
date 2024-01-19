@@ -1,0 +1,80 @@
+#extracts information from tensorboard logs and writes into pd dataframe
+
+import os
+import pandas as pd
+from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
+import logging
+
+logging.basicConfig(filename="/home/kandelaki/git/SAM-Adapter-PyTorch/figures/extractor.log",
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.ERROR)
+
+import tensorboard.backend.event_processing.event_accumulator
+
+x = EventMultiplexer(size_guidance={
+    tensorboard.backend.event_processing.event_accumulator.COMPRESSED_HISTOGRAMS: 1,
+    tensorboard.backend.event_processing.event_accumulator.IMAGES: 1,
+    tensorboard.backend.event_processing.event_accumulator.AUDIO: 1,
+    tensorboard.backend.event_processing.event_accumulator.SCALARS: 0,
+    tensorboard.backend.event_processing.event_accumulator.HISTOGRAMS: 1,
+}).AddRunsFromDirectory(path = '/home/kandelaki/git/SAM-Adapter-PyTorch/postprocessing/cross_test/trained_on_1/val_dataset/tested_on_1.0/test/AUCROC/')
+
+metrics = ['IoU', 'Dice', 'Precision', 'Recall', 'Accuracy', 'F1', 'AUCROC']
+
+def rename_folders(path):
+    #rename folders to remove spaces
+    for root, dirs, files in os.walk(path):
+        for dir in dirs:
+            if dir.startswith("tested_on"):
+               factor = dir.split("_")[-1]
+               factor = float("{:.2f}".format(float(factor)))
+               os.rename(os.path.join(root, dir), os.path.join(root, "tested_on_"+str(factor)))             
+               
+# def read_mean_values_from_log(path):
+
+def take_last_mean_value_of_metric(path, metric):
+    x = EventMultiplexer(size_guidance={
+        tensorboard.backend.event_processing.event_accumulator.COMPRESSED_HISTOGRAMS: 1,
+        tensorboard.backend.event_processing.event_accumulator.IMAGES: 1,
+        tensorboard.backend.event_processing.event_accumulator.AUDIO: 1,
+        tensorboard.backend.event_processing.event_accumulator.SCALARS: 0,
+        tensorboard.backend.event_processing.event_accumulator.HISTOGRAMS: 1,
+    }).AddRunsFromDirectory(path = path)
+    x.Reload()
+    try:
+        scalars = x.Scalars(tag=metric, run='mean')
+    except:
+        logging.error("No scalars found for metric: "+metric+" in path: "+path)
+        return None
+    last_mean = scalars[-1]
+    return last_mean.value
+
+def create_dataframes_from_tensorboard_logs(path):
+    os.makedirs('dataframes', exist_ok=True)
+    #create dataframes from tensorboard logs
+    rename_folders(path)
+    for dirpath, dirnames, filenames in os.walk(path):
+        for dir in dirnames:
+            if dir == "test":
+                trained_on = dirpath.split("/")[-3]
+                trained_on_factor = trained_on.split("_")[-1]
+                trained_on_factor = float("{:.2f}".format(float(trained_on_factor)))
+                tested_on = dirpath.split("/")[-1]
+                tested_on_factor = tested_on.split("_")[-1]
+                tested_on_factor = float("{:.2f}".format(float(tested_on_factor)))
+                dataset = dirpath.split("/")[-2]
+
+                for metric in metrics:
+                    path_to_metric = os.path.join(dirpath, dir, metric)
+                    value = take_last_mean_value_of_metric(path_to_metric, metric)
+                    df = pd.DataFrame([[trained_on_factor, tested_on_factor, dataset, metric, value]], columns=['trained_on_factor', 'tested_on_factor', 'dataset', 'metric', 'value'])
+                    # Save everything to one csv 
+                    if os.path.isfile('dataframes/df.csv'):
+                        df.to_csv('dataframes/df.csv', mode='a', header=False, index=False)
+                    else:
+                        df.to_csv('dataframes/df.csv', mode='a', header=True, index=False)
+
+
+create_dataframes_from_tensorboard_logs('/home/kandelaki/git/SAM-Adapter-PyTorch/postprocessing/cross_test/')
