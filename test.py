@@ -45,7 +45,7 @@ class Test:
                 gt = (gt>0)
     
                 pred = torch.sigmoid(self.model.infer(inp))
-      
+                
                 self.metrics.reset_current()
                 self.metrics.update(pred, gt)
                 values = self.metrics.compute()
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     testing_dataset = datasets.make(spec['dataset'])
     testing_dataset = datasets.make(spec['wrapper'], args={'dataset': testing_dataset})
     loader = DataLoader(testing_dataset, batch_size=spec['batch_size'],
-                        num_workers=8)
+                        num_workers=0)
     
     model = models.make(config['model'])
     device = model.device

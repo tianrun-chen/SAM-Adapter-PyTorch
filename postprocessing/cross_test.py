@@ -57,19 +57,20 @@ def test_this_model(trained_model, trained_on_factor, config, dataset_to_use, te
 
     test = Test(model, loader, trained_on_dataset, save_path,  original_image_dataset, trained_on_factor, testing_factor)
     test.start()
+    
 
-def test_all_models(models_meta_data, config, factor_step_size=0.2, range_start=1.0, range_end=6.0):
+def test_all_models(models_meta_data, config, factor_step_size=0.2, range_start=2.4, range_end=6.0):
     for meta_data in models_meta_data:
         model = meta_data.split(";")[0]
         for dataset in ["val_dataset", "test_dataset"]:
-            for testing_factor in np.arange(range_start, range_end, factor_step_size):
+            for testing_factor in tqdm(np.arange(range_start, range_end, factor_step_size), desc="Testing " + model + " on " + dataset + " with different resampling factors"):
                 trained_on_factor = meta_data.split(";")[1]
                 test_this_model(model, int(trained_on_factor), config, dataset, testing_factor)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default="../configs/sam-vit-b.yaml")
+    parser.add_argument('--config', default=None, help = "Path to config file")
     parser.add_argument('--models', default=None, help = "Path to seperate folders containing the models to be tested (Split with comma) and the factors they where trained on (Seperated by ;)")
     args = parser.parse_args()
     

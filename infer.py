@@ -21,7 +21,7 @@ from PIL import Image
 from torchvision import transforms
 
 
-class Forward:
+class Infer:
     def __init__(self, model, loader, save_path=None, inp_size=1024):
         self.model = model
         self.inp_size = inp_size
@@ -29,7 +29,7 @@ class Forward:
         self.loader = loader
         os.makedirs(self.save_path, exist_ok=True)
     
-    def compute(self):
+    def compute(self, threshold=0.5):
         self.model.eval()
 
 
@@ -40,7 +40,7 @@ class Forward:
             inp = batch['inp']
 
             pred = torch.sigmoid(self.model.infer(inp))
-            pred = pred.float()
+            pred = (pred>threshold).float()
             
             pred = transforms.ToPILImage()(pred.squeeze(0).float())
             pred.save(os.path.join(self.save_path, f'pred_{i}.png'))
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default="configs/sam-vit-b.yaml")
     parser.add_argument('--model', default=None)
-    parser.add_argument('--save-path', default="forward_results")
+    parser.add_argument('--save-path', default="infer_results")
     args = parser.parse_args()
 
     save_path = args.save_path
@@ -78,9 +78,9 @@ if __name__ == '__main__':
     model.load_state_dict(sam_checkpoint, strict=False)
 
 
-    loader = utils.make_data_loader(config, 'forward_dataset')
+    loader = utils.make_data_loader(config, 'infer_dataset')
     
-    forward = Forward(model, loader, save_path=save_path)
+    infer = Infer(model, loader, save_path=save_path)
 
-    pred = forward.compute()
+    pred = infer.compute()
     

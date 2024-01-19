@@ -50,13 +50,13 @@ test_dataset:
       resampling_inp_size: 1024
   batch_size: 1
 
-forward_dataset:
+infer_dataset:
   dataset:
     name: image-folder
     args:
       path: /home/kandelaki/git/SAM-Adapter-PyTorch/forward_folder
   wrapper:
-    name: forward
+    name: infer
     args:
       inp_size: 1024
       interpolation_mode: "nearest"

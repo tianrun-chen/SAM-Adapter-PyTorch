@@ -13,14 +13,6 @@ logging.basicConfig(filename="/home/kandelaki/git/SAM-Adapter-PyTorch/figures/ex
 
 import tensorboard.backend.event_processing.event_accumulator
 
-x = EventMultiplexer(size_guidance={
-    tensorboard.backend.event_processing.event_accumulator.COMPRESSED_HISTOGRAMS: 1,
-    tensorboard.backend.event_processing.event_accumulator.IMAGES: 1,
-    tensorboard.backend.event_processing.event_accumulator.AUDIO: 1,
-    tensorboard.backend.event_processing.event_accumulator.SCALARS: 0,
-    tensorboard.backend.event_processing.event_accumulator.HISTOGRAMS: 1,
-}).AddRunsFromDirectory(path = '/home/kandelaki/git/SAM-Adapter-PyTorch/postprocessing/cross_test/trained_on_1/val_dataset/tested_on_1.0/test/AUCROC/')
-
 metrics = ['IoU', 'Dice', 'Precision', 'Recall', 'Accuracy', 'F1', 'AUCROC']
 
 def rename_folders(path):
@@ -49,7 +41,11 @@ def take_last_mean_value_of_metric(path, metric):
         logging.error("No scalars found for metric: "+metric+" in path: "+path)
         return None
     last_mean = scalars[-1]
-    return last_mean.value
+    max_value = max(scalars, key=lambda x: x.value)
+    min_value = min(scalars, key=lambda x: x.value)
+    max_step = max_value.step
+    min_step = min_value.step
+    return {"last_mean": last_mean.value, "max_value": max_value.value, "min_value": min_value.value, "max_step": max_step, "min_step": min_step}
 
 def create_dataframes_from_tensorboard_logs(path):
     os.makedirs('dataframes', exist_ok=True)
@@ -68,8 +64,16 @@ def create_dataframes_from_tensorboard_logs(path):
 
                 for metric in metrics:
                     path_to_metric = os.path.join(dirpath, dir, metric)
-                    value = take_last_mean_value_of_metric(path_to_metric, metric)
-                    df = pd.DataFrame([[trained_on_factor, tested_on_factor, dataset, metric, value]], columns=['trained_on_factor', 'tested_on_factor', 'dataset', 'metric', 'value'])
+                    values_dict = take_last_mean_value_of_metric(path_to_metric, metric)
+                    if values_dict is None:
+                        continue
+                    last_mean = values_dict["last_mean"]
+                    max_value = values_dict["max_value"]
+                    min_value = values_dict["min_value"]
+                    max_step = values_dict["max_step"]
+                    min_step = values_dict["min_step"]  
+
+                    df = pd.DataFrame({"trained_on": [trained_on_factor], "tested_on": [tested_on_factor], "dataset": [dataset], "metric": [metric], "last_mean": [last_mean], "max_value": [max_value], "min_value": [min_value], "max_step": [max_step], "min_step": [min_step]})
                     # Save everything to one csv 
                     if os.path.isfile('dataframes/df.csv'):
                         df.to_csv('dataframes/df.csv', mode='a', header=False, index=False)

@@ -104,7 +104,7 @@ class TrainDataset(Dataset):
             mask = mask.transpose(Image.FLIP_LEFT_RIGHT)
 
         img = transforms.Resize((self.inp_size, self.inp_size))(img)
-        mask = transforms.Resize((self.inp_size, self.inp_size), interpolation=InterpolationMode.NEAREST)(mask)
+        mask =      (mask)
 
         return {
             'inp': self.img_transform(img),
@@ -113,8 +113,8 @@ class TrainDataset(Dataset):
     
 
 
-@register('forward')
-class ForwardDataset(Dataset):
+@register('infer')
+class InferDataset(Dataset):
     def __init__(self, dataset, inp_size=None, augment=False, interpolation_mode="nearest", resampling_factor = 1, resampling_inp_size = None):
         self.dataset = dataset
         self.inp_size = inp_size
