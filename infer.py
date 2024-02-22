@@ -29,7 +29,7 @@ class Infer:
         self.loader = loader
         os.makedirs(self.save_path, exist_ok=True)
     
-    def compute(self, threshold=0.5):
+    def compute(self, threshold=0.3):
         self.model.eval()
 
 
