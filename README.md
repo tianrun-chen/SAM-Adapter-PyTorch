@@ -10,9 +10,12 @@ In Proceedings of the IEEE/CVF International Conference on Computer Vision (pp. 
 ## 
 
 <a href='https://arxiv.org/abs/2304.09148'><img src='https://img.shields.io/badge/ArXiv-2304.09148-red' /></a> 
-Update on 30 August: This paper will be prsented at ICCV 2023. 
 
-Update on 28 April: We tested the performance of polyp segmentation to show our approach can also work on medical datasets.
+Update on 24 July, 2024: The link of pre-trained model is updated.
+
+Update on 30 August 2023: This paper will be prsented at ICCV 2023. 
+
+Update on 28 April 2023: We tested the performance of polyp segmentation to show our approach can also work on medical datasets.
 <img src='https://tianrun-chen.github.io/SAM-Adaptor/static/images/polyp.jpg'>
 Update on 22 April: We report our SOTA result based on ViT-H version of SAM (use demo.yaml). We have also uploaded the yaml config for ViT-L and ViT-B version of SAM, suitable  GPU with smaller memory (e.g. NVIDIA Tesla V-100), although they may compromise on accuracy.
 
@@ -55,7 +58,8 @@ python test.py --config [CONFIG_PATH] --model [MODEL_PATH]
 ```
 
 ## Pre-trained Models
-https://drive.google.com/file/d/1MMUytUHkAQvMRFNhcDyyDlEx_jWmXBkf/view?usp=sharing
+https://drive.google.com/file/d/13JilJT7dhxwMIgcdtnvdzr08vcbREFlR/view?usp=sharing
+
 
 ## Dataset
 
