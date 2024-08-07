@@ -12,7 +12,10 @@ from .mmseg.models.sam import ImageEncoderViT, MaskDecoder, TwoWayTransformer
 logger = logging.getLogger(__name__)
 from .iou_loss import IOU
 from typing import Any, Optional, Tuple
-
+from .sam2.modeling.backbones.image_encoder import ImageEncoder
+from .sam2.modeling.backbones.hieradet import Hiera
+from .sam2.modeling.backbones.image_encoder import FpnNeck
+from torch.nn.init import trunc_normal_
 
 def init_weights(layer):
     if type(layer) == nn.Conv2d:
@@ -92,30 +95,52 @@ class PositionEmbeddingRandom(nn.Module):
 
 @register('sam')
 class SAM(nn.Module):
-    def __init__(self, inp_size=None, encoder_mode=None, loss=None):
+    def __init__(self, inp_size=None, encoder_mode=None, loss=None,
+        sam_mask_decoder_extra_args=None,
+        use_high_res_features_in_sam=True,
+        directly_add_no_mem_embed=True,
+        iou_prediction_use_sigmoid=False,
+        pred_obj_scores: bool = True,
+        pred_obj_scores_mlp: bool = False,
+        use_obj_ptrs_in_encoder=False,
+        fixed_no_obj_ptr: bool = False,
+        use_multimask_token_for_obj_ptr: bool = True,
+                 ):
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.embed_dim = encoder_mode['embed_dim']
-        self.image_encoder = ImageEncoderViT(
-            img_size=inp_size,
-            patch_size=encoder_mode['patch_size'],
-            in_chans=3,
-            embed_dim=encoder_mode['embed_dim'],
-            depth=encoder_mode['depth'],
-            num_heads=encoder_mode['num_heads'],
-            mlp_ratio=encoder_mode['mlp_ratio'],
-            out_chans=encoder_mode['out_chans'],
-            qkv_bias=encoder_mode['qkv_bias'],
-            norm_layer=partial(torch.nn.LayerNorm, eps=1e-6),
-            act_layer=nn.GELU,
-            use_rel_pos=encoder_mode['use_rel_pos'],
-            rel_pos_zero_init=True,
-            window_size=encoder_mode['window_size'],
-            global_attn_indexes=encoder_mode['global_attn_indexes'],
+        self.image_encoder = ImageEncoder(
+            trunk = Hiera(),
+            neck = FpnNeck(),
         )
+        self._bb_feat_sizes = [
+            (256, 256),
+            (128, 128),
+            (64, 64),
+        ]
         self.prompt_embed_dim = encoder_mode['prompt_embed_dim']
+        self.sam_mask_decoder_extra_args = sam_mask_decoder_extra_args
+        self.use_high_res_features_in_sam = use_high_res_features_in_sam
+        self.directly_add_no_mem_embed = directly_add_no_mem_embed
+        self.num_feature_levels = 3 if use_high_res_features_in_sam else 1
+        self.iou_prediction_use_sigmoid = iou_prediction_use_sigmoid
+        self.pred_obj_scores = pred_obj_scores
+        self.use_obj_ptrs_in_encoder = use_obj_ptrs_in_encoder
+        self.pred_obj_scores_mlp = pred_obj_scores_mlp
+        self.fixed_no_obj_ptr = fixed_no_obj_ptr
+        self.use_multimask_token_for_obj_ptr = use_multimask_token_for_obj_ptr
+        if self.fixed_no_obj_ptr:
+            assert self.pred_obj_scores
+            assert self.use_obj_ptrs_in_encoder
+        if self.pred_obj_scores and self.use_obj_ptrs_in_encoder:
+            self.no_obj_ptr = torch.nn.Parameter(torch.zeros(1, self.hidden_dim))
+            trunc_normal_(self.no_obj_ptr, std=0.02)
+        self.fixed_no_obj_ptr = fixed_no_obj_ptr
+        if self.fixed_no_obj_ptr:
+            assert self.pred_obj_scores
+            assert self.use_obj_ptrs_in_encoder
         self.mask_decoder = MaskDecoder(
-            num_multimask_outputs=3,
+            num_multimask_outputs=1,
             transformer=TwoWayTransformer(
                 depth=2,
                 embedding_dim=self.prompt_embed_dim,
@@ -125,6 +150,12 @@ class SAM(nn.Module):
             transformer_dim=self.prompt_embed_dim,
             iou_head_depth=3,
             iou_head_hidden_dim=256,
+            use_high_res_features=self.use_high_res_features_in_sam,
+            iou_prediction_use_sigmoid=self.iou_prediction_use_sigmoid,
+            pred_obj_scores=self.pred_obj_scores,
+            pred_obj_scores_mlp=self.pred_obj_scores_mlp,
+            use_multimask_token_for_obj_ptr=self.use_multimask_token_for_obj_ptr,
+            **(self.sam_mask_decoder_extra_args or {}),
         )
 
         if 'evp' in encoder_mode['name']:
@@ -167,7 +198,7 @@ class SAM(nn.Module):
 
 
     def forward(self):
-        bs = 1
+        bs = 2
 
         # Embed prompts
         sparse_embeddings = torch.empty((bs, 0, self.prompt_embed_dim), device=self.input.device)
@@ -176,22 +207,66 @@ class SAM(nn.Module):
         )
 
         self.features = self.image_encoder(self.input)
+        if self.use_high_res_features_in_sam:
+            # precompute projected level 0 and level 1 features in SAM decoder
+            # to avoid running it again on every SAM click
+            self.features["backbone_fpn"][0] = self.mask_decoder.conv_s0(
+                self.features["backbone_fpn"][0]
+            )
+            self.features["backbone_fpn"][1] = self.mask_decoder.conv_s1(
+                self.features["backbone_fpn"][1]
+            )
+        self.features = self.features.copy()
+        assert len(self.features["backbone_fpn"]) == len(self.features["vision_pos_enc"])
+        assert len(self.features["backbone_fpn"]) >= self.num_feature_levels
 
+        feature_maps = self.features["backbone_fpn"][-self.num_feature_levels :]
+        vision_pos_embeds = self.features["vision_pos_enc"][-self.num_feature_levels :]
+
+        feat_sizes = [(x.shape[-2], x.shape[-1]) for x in vision_pos_embeds]
+        # flatten NxCxHxW to HWxNxC
+        vision_feats = [x.flatten(2).permute(2, 0, 1) for x in feature_maps]
+        vision_pos_embeds = [x.flatten(2).permute(2, 0, 1) for x in vision_pos_embeds]
+
+        _, vision_feats, _, _ = self.features, vision_feats, vision_pos_embeds, feat_sizes
+
+        if self.directly_add_no_mem_embed:
+            vision_feats[-1] = vision_feats[-1] + torch.nn.Parameter(torch.zeros(1, 1, 256).to('cuda'))
+        feats = [
+            feat.permute(1, 2, 0).view(2, -1, *feat_size)
+            for feat, feat_size in zip(vision_feats[::-1], self._bb_feat_sizes[::-1])
+        ][::-1]
+        self._features = {"image_embed": feats[-1], "high_res_feats": feats[:-1]}
+        high_res_features = [
+            feat_level[-1].unsqueeze(0)
+            for feat_level in self._features["high_res_feats"]
+        ]
         # Predict masks
-        low_res_masks, iou_predictions = self.mask_decoder(
-            image_embeddings=self.features,
+        low_res_masks, iou_predictions,sam_output_tokens,object_score_logits, = self.mask_decoder(
+            image_embeddings=self._features["image_embed"],
             image_pe=self.get_dense_pe(),
             sparse_prompt_embeddings=sparse_embeddings,
             dense_prompt_embeddings=dense_embeddings,
-            multimask_output=False,
+            multimask_output=True,
+            repeat_image=False,  # the image is already batched
+            high_res_features=high_res_features,
         )
 
         # Upscale the masks to the original image resolution
         masks = self.postprocess_masks(low_res_masks, self.inp_size, self.inp_size)
+        # masks = torch.stack([
+        #     self.postprocess_masks(low_res_masks[i], self.inp_size)
+        # for i in range(low_res_masks.shape[0])
+        # ])
+        # low_res_masks = torch.clamp(low_res_masks, -32.0, 32.0)
+        # if not return_logits:
+        # if not False:
+        #     # masks = masks > self.mask_threshold
+        #     masks = masks > 0.0
         self.pred_mask = masks
 
     def infer(self, input):
-        bs = 1
+        bs = 2
 
         # Embed prompts
         sparse_embeddings = torch.empty((bs, 0, self.prompt_embed_dim), device=input.device)
@@ -200,14 +275,50 @@ class SAM(nn.Module):
         )
 
         self.features = self.image_encoder(input)
+        if self.use_high_res_features_in_sam:
+            # precompute projected level 0 and level 1 features in SAM decoder
+            # to avoid running it again on every SAM click
+            self.features["backbone_fpn"][0] = self.mask_decoder.conv_s0(
+                self.features["backbone_fpn"][0]
+            )
+            self.features["backbone_fpn"][1] = self.mask_decoder.conv_s1(
+                self.features["backbone_fpn"][1]
+            )
+        self.features = self.features.copy()
+        assert len(self.features["backbone_fpn"]) == len(self.features["vision_pos_enc"])
+        assert len(self.features["backbone_fpn"]) >= self.num_feature_levels
+
+        feature_maps = self.features["backbone_fpn"][-self.num_feature_levels :]
+        vision_pos_embeds = self.features["vision_pos_enc"][-self.num_feature_levels :]
+
+        feat_sizes = [(x.shape[-2], x.shape[-1]) for x in vision_pos_embeds]
+        # flatten NxCxHxW to HWxNxC
+        vision_feats = [x.flatten(2).permute(2, 0, 1) for x in feature_maps]
+        vision_pos_embeds = [x.flatten(2).permute(2, 0, 1) for x in vision_pos_embeds]
+
+        _, vision_feats, _, _ = self.features, vision_feats, vision_pos_embeds, feat_sizes
+
+        if self.directly_add_no_mem_embed:
+            vision_feats[-1] = vision_feats[-1] + torch.nn.Parameter(torch.zeros(1, 1, 256).to('cuda'))
+        feats = [
+            feat.permute(1, 2, 0).view(bs, -1, *feat_size)
+            for feat, feat_size in zip(vision_feats[::-1], self._bb_feat_sizes[::-1])
+        ][::-1]
+        self._features = {"image_embed": feats[-1], "high_res_feats": feats[:-1]}
+        high_res_features = [
+            feat_level[-1].unsqueeze(0)
+            for feat_level in self._features["high_res_feats"]
+        ]
 
         # Predict masks
-        low_res_masks, iou_predictions = self.mask_decoder(
-            image_embeddings=self.features,
+        low_res_masks, iou_predictions,sam_output_tokens,object_score_logits, = self.mask_decoder(
+            image_embeddings=self._features["image_embed"],
             image_pe=self.get_dense_pe(),
             sparse_prompt_embeddings=sparse_embeddings,
             dense_prompt_embeddings=dense_embeddings,
-            multimask_output=False,
+            multimask_output=True,
+            repeat_image=False,  # the image is already batched
+            high_res_features=high_res_features,
         )
 
         # Upscale the masks to the original image resolution
@@ -245,6 +356,33 @@ class SAM(nn.Module):
         masks = F.interpolate(masks, original_size, mode="bilinear", align_corners=False)
         return masks
 
+    def postprocess_masks2(self, masks: torch.Tensor, orig_hw) -> torch.Tensor:
+        """
+        Perform PostProcessing on output masks.
+        """
+        from .sam2.utils.misc import get_connected_components
+
+        masks = masks.float()
+        # if self.max_hole_area > 0:
+        if self.max_hole_area > 0:
+            # Holes are those connected components in background with area <= self.fill_hole_area
+            # (background regions are those with mask scores <= self.mask_threshold)
+            mask_flat = masks.flatten(0, 1).unsqueeze(1)  # flatten as 1-channel image
+            labels, areas = get_connected_components(mask_flat <= self.mask_threshold)
+            is_hole = (labels > 0) & (areas <= self.max_hole_area)
+            is_hole = is_hole.reshape_as(masks)
+            # We fill holes with a small positive mask score (10.0) to change them to foreground.
+            masks = torch.where(is_hole, self.mask_threshold + 10.0, masks)
+
+        if self.max_sprinkle_area > 0:
+            labels, areas = get_connected_components(mask_flat > self.mask_threshold)
+            is_hole = (labels > 0) & (areas <= self.max_sprinkle_area)
+            is_hole = is_hole.reshape_as(masks)
+            # We fill holes with negative mask score (-10.0) to change them to background.
+            masks = torch.where(is_hole, self.mask_threshold - 10.0, masks)
+
+        masks = F.interpolate(masks, orig_hw, mode="bilinear", align_corners=False)
+        return masks
     def backward_G(self):
         """Calculate GAN and L1 loss for the generator"""
         self.loss_G = self.criterionBCE(self.pred_mask, self.gt_mask)

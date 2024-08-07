@@ -32,7 +32,7 @@ def make_data_loader(spec, tag=''):
 
     sampler = torch.utils.data.distributed.DistributedSampler(dataset)
     loader = DataLoader(dataset, batch_size=spec['batch_size'],
-        shuffle=False, num_workers=8, pin_memory=True, sampler=sampler)
+        shuffle=False, num_workers=8, pin_memory=True, sampler=sampler,drop_last=True)
     return loader
 
 
@@ -57,6 +57,10 @@ def eval_psnr(loader, model, eval_type=None):
     elif eval_type == 'cod':
         metric_fn = utils.calc_cod
         metric1, metric2, metric3, metric4 = 'sm', 'em', 'wfm', 'mae'
+    elif eval_type == 'kvasir':
+        metric_fn = utils.calc_kvasir
+        metric1, metric2, metric3, metric4 = 'dice', 'iou', 'none', 'none'
+        
 
     if local_rank == 0:
         pbar = tqdm(total=len(loader), leave=False, desc='val')
@@ -65,6 +69,13 @@ def eval_psnr(loader, model, eval_type=None):
 
     pred_list = []
     gt_list = []
+    
+    val_metric1 = 0
+    val_metric2 = 0
+    val_metric3 = 0
+    val_metric4 = 0
+    cnt = 0
+    
     for batch in loader:
         for k, v in batch.items():
             batch[k] = v.cuda()
@@ -75,22 +86,30 @@ def eval_psnr(loader, model, eval_type=None):
 
         batch_pred = [torch.zeros_like(pred) for _ in range(dist.get_world_size())]
         batch_gt = [torch.zeros_like(batch['gt']) for _ in range(dist.get_world_size())]
-
-        dist.all_gather(batch_pred, pred)
-        pred_list.extend(batch_pred)
-        dist.all_gather(batch_gt, batch['gt'])
-        gt_list.extend(batch_gt)
+        
+        result1, result2, result3, result4 = metric_fn(pred, batch['gt'])
+        val_metric1 += (result1 * pred.shape[0])
+        val_metric2 += (result2 * pred.shape[0])
+        val_metric3 += (result3 * pred.shape[0])
+        val_metric4 += (result4 * pred.shape[0])     
+        cnt += pred.shape[0]
         if pbar is not None:
             pbar.update(1)
-
+    val_metric1 = torch.tensor(val_metric1).cuda()
+    val_metric2 = torch.tensor(val_metric2).cuda()
+    val_metric3 = torch.tensor(val_metric3).cuda()
+    val_metric4 = torch.tensor(val_metric4).cuda()
+    cnt = torch.tensor(cnt).cuda()
+    dist.all_reduce(val_metric1)
+    dist.all_reduce(val_metric2)
+    dist.all_reduce(val_metric3)
+    dist.all_reduce(val_metric4)
+    dist.all_reduce(cnt)
+          
     if pbar is not None:
         pbar.close()
-
-    pred_list = torch.cat(pred_list, 1)
-    gt_list = torch.cat(gt_list, 1)
-    result1, result2, result3, result4 = metric_fn(pred_list, gt_list)
-
-    return result1, result2, result3, result4, metric1, metric2, metric3, metric4
+    
+    return val_metric1.item()/cnt, val_metric2.item()/cnt, val_metric3.item()/cnt, val_metric4.item()/cnt, metric1, metric2, metric3, metric4
 
 
 def prepare_training():
@@ -169,7 +188,7 @@ def main(config_, save_path, args):
     model = model.module
 
     sam_checkpoint = torch.load(config['sam_checkpoint'])
-    model.load_state_dict(sam_checkpoint, strict=False)
+    model.load_state_dict(sam_checkpoint['model'], strict=False)
     
     for name, para in model.named_parameters():
         if "image_encoder" in name and "prompt_generator" not in name:
@@ -221,8 +240,8 @@ def main(config_, save_path, args):
                         max_val_v = result1
                         save(config, model, save_path, 'best')
                 else:
-                    if result3 < max_val_v:
-                        max_val_v = result3
+                    if result2 < max_val_v:
+                        max_val_v = result2
                         save(config, model, save_path, 'best')
 
                 t = timer.t()
