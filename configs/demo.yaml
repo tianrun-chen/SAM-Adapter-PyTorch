@@ -42,7 +42,7 @@ test_dataset:
   batch_size: 1
 
 eval_type: cod
-sam_checkpoint: ./pretrained/sam2_hiera_base_plus.pt
+sam_checkpoint: ./pretrained/sam_vit_l_0b3195.pth
 data_norm:
   inp:
     sub:
@@ -66,18 +66,6 @@ model:
     loss: iou
     encoder_mode:
       name: sam
-      stages: [2, 6, 36, 4]
-      global_att_blocks: [23, 33, 43]
-      window_pos_embed_bkg_spatial_size: [7, 7]
-      window_spec: [8, 4, 16, 8]
-      num_pos_feats: 256
-      normalize: true
-      scale: null
-      temperature: 10000
-      d_model: 256
-      backbone_channel_list: [1152, 576, 288, 144]
-      fpn_top_down_levels: [2, 3]
-      fpn_interp_model: nearest
       img_size: 1024
       mlp_ratio: 4
       patch_size: 16
@@ -94,9 +82,9 @@ model:
       handcrafted_tune: true
       embedding_tune: true
       adaptor: adaptor
-      embed_dim: 144
+      embed_dim: 1280
       depth: 32
-      num_heads: 2
+      num_heads: 16
       global_attn_indexes:
       - 7
       - 15
