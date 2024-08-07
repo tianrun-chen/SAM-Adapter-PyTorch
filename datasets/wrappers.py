@@ -14,6 +14,7 @@ from datasets import register
 import cv2
 from math import pi
 from torchvision.transforms import InterpolationMode
+from datasets.transform_custom import *
 
 import torch.nn.functional as F
 def to_mask(mask):
@@ -45,6 +46,10 @@ class ValDataset(Dataset):
                 transforms.Resize((inp_size, inp_size), interpolation=Image.NEAREST),
                 transforms.ToTensor(),
             ])
+        self.rgb_transform = transforms.Compose([
+                transforms.Resize((inp_size, inp_size), interpolation=Image.NEAREST),
+                transforms.ToTensor(),
+            ])
 
     def __len__(self):
         return len(self.dataset)
@@ -54,7 +59,8 @@ class ValDataset(Dataset):
 
         return {
             'inp': self.img_transform(img),
-            'gt': self.mask_transform(mask)
+            'gt': self.mask_transform(mask),
+            'inp_rgb': self.rgb_transform(img),
         }
 
 
@@ -71,11 +77,12 @@ class TrainDataset(Dataset):
         self.gt_resize = gt_resize
 
         self.inp_size = inp_size
-        self.img_transform = transforms.Compose([
-                transforms.Resize((self.inp_size, self.inp_size)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+        self.transform = transforms.Compose([
+                RandomHorizontalFlip(),
+                RandomScaleCrop(base_size=self.inp_size, crop_size=self.inp_size),
+                RandomGaussianBlur(),
+                Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                ToTensor(),
             ])
         self.inverse_transform = transforms.Compose([
                 transforms.Normalize(mean=[0., 0., 0.],
@@ -99,10 +106,11 @@ class TrainDataset(Dataset):
             img = img.transpose(Image.FLIP_LEFT_RIGHT)
             mask = mask.transpose(Image.FLIP_LEFT_RIGHT)
 
-        img = transforms.Resize((self.inp_size, self.inp_size))(img)
-        mask = transforms.Resize((self.inp_size, self.inp_size), interpolation=InterpolationMode.NEAREST)(mask)
-
+        img = transforms.Resize((1280, 1280))(img)
+        mask = transforms.Resize((1280, 1280), interpolation=InterpolationMode.NEAREST)(mask)
+        sample = {"image": img, "label": mask}
+        sample = self.transform(sample)
         return {
-            'inp': self.img_transform(img),
-            'gt': self.mask_transform(mask)
+            'inp': sample["image"],
+            'gt': sample["label"][None]
         }
