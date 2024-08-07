@@ -58,6 +58,9 @@ def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
     elif eval_type == 'cod':
         metric_fn = utils.calc_cod
         metric1, metric2, metric3, metric4 = 'sm', 'em', 'wfm', 'mae'
+    elif eval_type == 'kvasir':
+        metric_fn = utils.calc_kvasir
+        metric1, metric2, metric3, metric4 = 'dice', 'iou', 'none', 'none'
 
     val_metric1 = utils.Averager()
     val_metric2 = utils.Averager()
@@ -65,7 +68,8 @@ def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
     val_metric4 = utils.Averager()
 
     pbar = tqdm(loader, leave=False, desc='val')
-
+    
+    cnt = 0
     for batch in pbar:
         for k, v in batch.items():
             batch[k] = v.cuda()
@@ -73,18 +77,26 @@ def eval_psnr(loader, model, data_norm=None, eval_type=None, eval_bsize=None,
         inp = batch['inp']
 
         pred = torch.sigmoid(model.infer(inp))
+        pred[pred>0.5]=1
+        pred[pred<0.5]=0
 
         result1, result2, result3, result4 = metric_fn(pred, batch['gt'])
         val_metric1.add(result1.item(), inp.shape[0])
         val_metric2.add(result2.item(), inp.shape[0])
-        val_metric3.add(result3.item(), inp.shape[0])
-        val_metric4.add(result4.item(), inp.shape[0])
+        try:
+            val_metric3.add(result3.item(), inp.shape[0])
+            val_metric4.add(result4.item(), inp.shape[0])
+        except:
+            pass
 
         if verbose:
             pbar.set_description('val {} {:.4f}'.format(metric1, val_metric1.item()))
             pbar.set_description('val {} {:.4f}'.format(metric2, val_metric2.item()))
-            pbar.set_description('val {} {:.4f}'.format(metric3, val_metric3.item()))
-            pbar.set_description('val {} {:.4f}'.format(metric4, val_metric4.item()))
+            try:
+                pbar.set_description('val {} {:.4f}'.format(metric3, val_metric3.item()))
+                pbar.set_description('val {} {:.4f}'.format(metric4, val_metric4.item()))
+            except:
+                pass
 
     return val_metric1.item(), val_metric2.item(), val_metric3.item(), val_metric4.item()
 
@@ -102,12 +114,12 @@ if __name__ == '__main__':
     dataset = datasets.make(spec['dataset'])
     dataset = datasets.make(spec['wrapper'], args={'dataset': dataset})
     loader = DataLoader(dataset, batch_size=spec['batch_size'],
-                        num_workers=8)
+                        num_workers=8, shuffle=False)
 
     model = models.make(config['model']).cuda()
     sam_checkpoint = torch.load(args.model, map_location='cuda:0')
     model.load_state_dict(sam_checkpoint, strict=True)
-    
+
     metric1, metric2, metric3, metric4 = eval_psnr(loader, model,
                                                    data_norm=config.get('data_norm'),
                                                    eval_type=config.get('eval_type'),

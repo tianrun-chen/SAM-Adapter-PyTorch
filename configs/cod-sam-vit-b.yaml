@@ -2,8 +2,8 @@ train_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: /public2/home/chaotao/datasets/codDataset/train/img
-      root_path_2: /public2/home/chaotao/datasets/codDataset/train/gt
+      root_path_1: /public2/home/dww/lak/SAM2-Adapter-PyTorch-main/load/codDataset/train/img
+      root_path_2: /public2/home/dww/lak/SAM2-Adapter-PyTorch-main/load/codDataset/train/gt
       cache: none
       split_key: train
   wrapper:
@@ -17,8 +17,8 @@ val_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: /public2/home/chaotao/datasets/COD/TestDataset/COD10K/Imgs
-      root_path_2: /public2/home/chaotao/datasets/COD/TestDataset/COD10K/GT
+      root_path_1: /public2/home/dww/lak/SAM2-Adapter-PyTorch-main/load/COD/TestDataset/COD10K/Imgs
+      root_path_2: /public2/home/dww/lak/SAM2-Adapter-PyTorch-main/load/COD/TestDataset/COD10K/GT
       cache: none
       split_key: test
   wrapper:
@@ -31,8 +31,8 @@ test_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: /public2/home/chaotao/datasets/COD/TestDataset/COD10K/Imgs
-      root_path_2: /public2/home/chaotao/datasets/COD/TestDataset/COD10K/GT
+      root_path_1: /public2/home/dww/lak/SAM2-Adapter-PyTorch-main/load/COD/TestDataset/COD10K/Imgs
+      root_path_2: /public2/home/dww/lak/SAM2-Adapter-PyTorch-main/load/COD/TestDataset/COD10K/GT
       cache: none
       split_key: test
   wrapper:
@@ -42,7 +42,7 @@ test_dataset:
   batch_size: 1
 
 eval_type: cod
-sam_checkpoint: ./pretrained/sam_vit_b_01ec64.pth
+sam_checkpoint: ./pretrained/sam2_hiera_base_plus.pt
 data_norm:
   inp:
     sub:
