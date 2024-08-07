@@ -1,4 +1,4 @@
-## SAM-adapter: Adapting SAM in Underperformed Scenes
+## SAM-Adapter: Adapting SAM in Underperformed Scenes (Now Support SAM2!)
 
 Tianrun Chen, Lanyun Zhu, Chaotao Ding, Runlong Cao, Yan Wang, Shangzhan Zhang, Zejian Li, Lingyun Sun, Papa Mao, Ying Zang
 
@@ -10,6 +10,8 @@ In Proceedings of the IEEE/CVF International Conference on Computer Vision (pp. 
 ## 
 
 <a href='https://arxiv.org/abs/2304.09148'><img src='https://img.shields.io/badge/ArXiv-2304.09148-red' /></a> 
+
+Update on 8 Aug, 2024: We add support for adapting with SAM2 (Segment Anything 2), a more powerful backbone! Please refer our <a href="https://www.researchgate.net/publication/382940773_SAM2-Adapter_Evaluating_Adapting_Segment_Anything_2_in_Downstream_Tasks_Camouflage_Shadow_Medical_Image_Segmentation_and_More">new technical report!</a>
 
 Update on 24 July, 2024: The link of pre-trained model is updated.
 
