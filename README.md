@@ -81,6 +81,26 @@ https://drive.google.com/file/d/13JilJT7dhxwMIgcdtnvdzr08vcbREFlR/view?usp=shari
 If you find our work useful in your research, please consider citing:
 
 ```
+
+@inproceedings{chen2023sam,
+  title={Sam-adapter: Adapting segment anything in underperformed scenes},
+  author={Chen, Tianrun and Zhu, Lanyun and Deng, Chaotao and Cao, Runlong and Wang, Yan and Zhang, Shangzhan and Li, Zejian and Sun, Lingyun and Zang, Ying and Mao, Papa},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
+  pages={3367--3375},
+  year={2023}
+}
+
+@misc{chen2024sam2adapterevaluatingadapting,
+      title={SAM2-Adapter: Evaluating & Adapting Segment Anything 2 in Downstream Tasks: Camouflage, Shadow, Medical Image Segmentation, and More}, 
+      author={Tianrun Chen and Ankang Lu and Lanyun Zhu and Chaotao Ding and Chunan Yu and Deyi Ji and Zejian Li and Lingyun Sun and Papa Mao and Ying Zang},
+      year={2024},
+      eprint={2408.04579},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2408.04579}, 
+}
+
+
 @misc{chen2023sam,
       title={SAM Fails to Segment Anything? -- SAM-Adapter: Adapting SAM in Underperformed Scenes: Camouflage, Shadow, and More}, 
       author={Tianrun Chen and Lanyun Zhu and Chaotao Ding and Runlong Cao and Shangzhan Zhang and Yan Wang and Zejian Li and Lingyun Sun and Papa Mao and Ying Zang},
@@ -89,6 +109,8 @@ If you find our work useful in your research, please consider citing:
       archivePrefix={arXiv},
       primaryClass={cs.CV}
 }
+
+
 ```
 
 ## Acknowledgements
