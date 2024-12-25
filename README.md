@@ -1,5 +1,5 @@
 ## SAM2-Adapter: Evaluating & Adapting Segment Anything 2 in Downstream Tasks: Camouflage, Shadow, Medical Image Segmentation, and More
-
+## Before Trying this code, we strongly recommend you try the code in the main branch (using original SAM) first!
 ## Environment
 This code was implemented with Python 3.11 and PyTorch 2.3.0. You can install all the requirements via:
 ```bash
