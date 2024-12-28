@@ -10,7 +10,8 @@ pip install -r requirements.txt
 ## Quick Start
 1. Download the dataset and put it in ./load.
 2. Download the pre-trained [SAM 2(Segment Anything)](https://github.com/facebookresearch/segment-anything-2) and put it in ./pretrained.
-3. Training:
+   Note that we are using sam2.1_hiera_large.pt https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt. If you use other weight, modifications to the code is needed.
+4. Training:
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.run --nnodes 1 --nproc_per_node 4 loadddptrain.py --config configs/demo.yaml
 ```
