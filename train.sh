@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m  torch.distributed.run --nnodes 1 --nproc_per_node 4  train.py --config /home/ubuntu/public_c/crl/sam3_adapter/SAM-Adapter-PyTorch/configs/cod-sam-vit-l.yaml

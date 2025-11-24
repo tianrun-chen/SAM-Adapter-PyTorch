@@ -2,8 +2,8 @@ train_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: /home/ubuntu/public_c/crl/ref/data/kvasir-seg/train/images
-      root_path_2: /home/ubuntu/public_c/crl/ref/data/kvasir-seg/train/masks
+      root_path_1: /home/ubuntu/public_c/crl/ref/data/cod/TrainDataset/Image
+      root_path_2: /home/ubuntu/public_c/crl/ref/data/cod/TrainDataset/GT
       cache: none
       split_key: train
   wrapper:
@@ -18,8 +18,8 @@ val_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: /home/ubuntu/public_c/crl/ref/data/kvasir-seg/test/images
-      root_path_2: /home/ubuntu/public_c/crl/ref/data/kvasir-seg/test/masks
+      root_path_1: /home/ubuntu/public_c/crl/ref/data/cod/TestDataset/Image
+      root_path_2: /home/ubuntu/public_c/crl/ref/data/cod/TestDataset/GT
       cache: none
       split_key: test
   wrapper:
@@ -33,8 +33,14 @@ test_dataset:
   dataset:
     name: paired-image-folders
     args:
-      root_path_1: /home/ubuntu/public_c/crl/ref/data/kvasir-seg/test/images
-      root_path_2: /home/ubuntu/public_c/crl/ref/data/kvasir-seg/test/masks
+      root_path_1: /home/ubuntu/public_c/crl/ref/data/ISTD_Dataset/test/test_A
+      root_path_2: /home/ubuntu/public_c/crl/ref/data/ISTD_Dataset/test/test_B
+#       root_path_1: /home/ubuntu/public_c/crl/ref/data/cod/TestData_new/cod10k/Image
+#      root_path_1: /home/ubuntu/public_c/crl/ref/data/cod/TestDataset/Image
+#      root_path_1: /home/ubuntu/public_c/crl/ref/data/kvasir-seg/test/images
+#      root_path_2: /home/ubuntu/public_c/crl/ref/data/kvasir-seg/test/masks
+#      root_path_2: /home/ubuntu/public_c/crl/ref/data/cod/TestData_new/cod10k/GT
+#      root_path_2: /home/ubuntu/public_c/crl/ref/data/cod/TestDataset/GT
       cache: none
       split_key: test
   wrapper:
@@ -44,10 +50,8 @@ test_dataset:
       inp_size: 1008
   batch_size: 1
 
-eval_type: cod
-#sam_checkpoint: /home/ubuntu/public_c/crl/phd/res/checkpoint/sam2/sam2_hiera_large.pt
+eval_type: ber
 sam_checkpoint: /home/ubuntu/public_c/crl/sam3_adapter/checkpoint/sam3.pt
-#sam_checkpoint: /home/ubuntu/public_c/crl/sam3_adapter/SAM-Adapter-PyTorch/save/_cod-sam-vit-l/model_epoch_best.pth
 data_norm:
   inp:
     sub:

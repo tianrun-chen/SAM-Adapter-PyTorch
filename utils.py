@@ -350,6 +350,7 @@ def _ssim(pred, gt):
         Q = 0
     return Q
 
+  
 def _eval_e(y_pred, y, num):
     score = torch.zeros(num)
     thlist = torch.linspace(0, 1 - 1e-10, num)
@@ -361,3 +362,43 @@ def _eval_e(y_pred, y, num):
         enhanced = ((align_matrix + 1) * (align_matrix + 1)) / 4
         score[i] = torch.sum(enhanced) / (y.numel() - 1 + 1e-20)
     return score
+
+  
+def dice_coeff(im1, im2, empty_score=1.0):
+    """Calculates the dice coefficient for the images"""
+
+    #im1 = np.asarray(im1).astype(np.bool)
+    #im2 = np.asarray(im2).astype(np.bool)
+
+    if im1.shape != im2.shape:
+        raise ValueError("Shape mismatch: im1 and im2 must have the same shape.")
+
+    im1 = im1 > 0.5
+    im2 = im2 > 0.5
+
+    im_sum = im1.sum() + im2.sum()
+    if im_sum == 0:
+        return empty_score
+
+    # Compute Dice coefficient
+    intersection = np.logical_and(im1, im2)
+    #print(im_sum)
+
+    return 2. * intersection.sum() / im_sum
+
+
+def iou(pred, target, eps=1e-6):
+    dims = tuple(range(1, pred.ndim))
+    intersect = np.sum(pred * target, axis=dims)
+    union = np.sum(pred + target - pred * target, axis=dims) + eps
+    return np.sum(intersect / union) / intersect.size
+
+
+def calc_kvasir(pred, target):
+  	#print("======================================================",pred.shape)
+    #print("======================================================",target.shape)
+    pred_np = pred.detach().cpu().numpy()
+    target_np = target.detach().cpu().numpy()
+    v_iou = iou(pred_np, target_np)
+    v_dice = dice_coeff(pred_np, target_np)
+    return v_dice, v_iou, 0, 0
